@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎬</text></svg>">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VibeShorts</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        --accent-color-light: #7F56D9; /* Vibrant Purple */
+        --secondary-color-light: #FF89B2; /* Soft Pink */
+        --bg-color-light: #F9FAFB;
+        --frame-bg-color-light: #FFFFFF;
+        --text-color-light: #111827;
+        --border-color-light: #E5E7EB;
+      }
+
+      [data-theme="dark"] {
+        --accent-color-dark: #F92C85; /* Electric Pink */
+        --secondary-color-dark: #0CF2F2; /* Electric Cyan */
+        --bg-color-dark: #0D0B14;
+        --frame-bg-color-dark: #161320;
+        --text-color-dark: #E5E7EB;
+        --border-color-dark: #221F33;
+      }
+      
+      :root {
+        --accent-color: var(--accent-color-light);
+        --secondary-color: var(--secondary-color-light);
+        --bg-color: var(--bg-color-light);
+        --frame-bg-color: var(--frame-bg-color-light);
+        --text-color: var(--text-color-light);
+        --border-color: var(--border-color-light);
+        --glow-shadow-color: rgba(127, 86, 217, 0.2);
+      }
+      
+      html[data-theme="dark"] {
+        --accent-color: var(--accent-color-dark);
+        --secondary-color: var(--secondary-color-dark);
+        --bg-color: var(--bg-color-dark);
+        --frame-bg-color: var(--frame-bg-color-dark);
+        --text-color: var(--text-color-dark);
+        --border-color: var(--border-color-dark);
+        --glow-shadow-color: rgba(249, 44, 133, 0.15);
+      }
+      
+      body {
+        background-color: var(--bg-color);
+        font-family: 'Nunito', sans-serif;
+        transition: background-color 0.3s ease;
+      }
+      
+      .font-display {
+        font-family: 'Nunito', sans-serif;
+        font-weight: 900;
+      }
+      
+      .font-brand {
+        font-family: 'Orbitron', sans-serif;
+        font-weight: 900;
+      }
+
+      /* Scrollbar styles for feed */
+      main::-webkit-scrollbar, .comment-list::-webkit-scrollbar { display: none; }
+      main, .comment-list { -ms-overflow-style: none; scrollbar-width: none; }
+      
+      @keyframes heart-pop {
+        0% { transform: scale(0.5); opacity: 0; }
+        50% { transform: scale(1.2); opacity: 1; }
+        100% { transform: scale(1.1); opacity: 0; }
+      }
+      .animate-heart-pop {
+        animation: heart-pop 0.6s ease-out forwards;
+      }
+
+      @keyframes coin-rise {
+        0% { transform: translateY(0) scale(0.8); opacity: 1; }
+        100% { transform: translateY(-80px) scale(1.2); opacity: 0; }
+      }
+      .animate-coin-rise {
+        animation: coin-rise 1s ease-out forwards;
+      }
+
+      @keyframes fade-in-out {
+        0%, 100% { opacity: 0; transform: translateY(20px) scale(0.95); }
+        10%, 90% { opacity: 1; transform: translateY(0) scale(1); }
+      }
+      .animate-fade-in-out {
+        animation: fade-in-out 3s ease-in-out forwards;
+      }
+      
+      @keyframes pulse-glow {
+        0%, 100% {
+          transform: scale(1);
+          box-shadow: 0 0 8px var(--accent-color), 0 0 12px var(--accent-color), inset 0 0 5px rgba(255,255,255,0.3);
+        }
+        50% {
+          transform: scale(1.05);
+          box-shadow: 0 0 16px var(--accent-color), 0 0 24px var(--accent-color), inset 0 0 5px rgba(255,255,255,0.3);
+        }
+      }
+      .upload-btn-animated {
+        animation: pulse-glow 2.5s infinite ease-in-out;
+      }
+
+      .filter-list::-webkit-scrollbar { height: 4px; }
+      .filter-list::-webkit-scrollbar-track { background: transparent; }
+      .filter-list::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 2px; }
+      
+      .trim-bar {
+        width: 100%;
+        padding: 8px 0;
+        cursor: pointer;
+      }
+      .trim-track {
+        width: 100%;
+        height: 8px;
+        background: var(--border-color);
+        border-radius: 4px;
+        position: relative;
+      }
+      .trim-handle {
+        width: 22px;
+        height: 22px;
+        background: white;
+        border: 3px solid var(--accent-color);
+        border-radius: 50%;
+        position: absolute;
+        top: 50%;
+        cursor: ew-resize;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.3), 0 0 0 3px var(--frame-bg-color);
+        z-index: 10;
+        transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
+      }
+      .trim-handle:active {
+        transform: translate(-50%, -50%) scale(1.15);
+        box-shadow: 0 3px 8px rgba(0,0,0,0.3), 0 0 0 3px var(--frame-bg-color), 0 0 12px var(--accent-color);
+      }
+
+      /* Custom Range Input Styles */
+      input[type=range].progress-bar-slider,
+      input[type=range].volume-slider {
+        -webkit-appearance: none;
+        appearance: none;
+        background: transparent;
+        cursor: pointer;
+      }
+      input[type=range].volume-slider { width: 80px; }
+      
+      /* Track */
+      input[type=range]::-webkit-slider-runnable-track {
+        background: rgba(255, 255, 255, 0.2);
+        height: 8px;
+        border-radius: 4px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      input[type=range]::-moz-range-track {
+        background: rgba(255, 255, 255, 0.2);
+        height: 8px;
+        border-radius: 4px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      
+      /* Thumb */
+      input[type=range]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        margin-top: -5px; /* Centers thumb on track */
+        background-color: #fff;
+        height: 18px;
+        width: 18px;
+        border-radius: 50%;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+        border: 1px solid rgba(0,0,0,0.2);
+        transition: transform 0.1s ease;
+      }
+      input[type=range]::-moz-range-thumb {
+        border: none;
+        background-color: #fff;
+        height: 18px;
+        width: 18px;
+        border-radius: 50%;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+      }
+       input[type=range]:active::-webkit-slider-thumb {
+        transform: scale(1.2);
+      }
+
+      .profile-video-thumb:hover img {
+        transform: scale(1.1);
+      }
+
+      /* Toggle Switch CSS */
+      .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 50px;
+        height: 28px;
+      }
+      .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+      .toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: var(--border-color);
+        transition: .3s;
+        border-radius: 28px;
+      }
+      .toggle-slider:before {
+        position: absolute;
+        content: "";
+        height: 20px;
+        width: 20px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        transition: .3s;
+        border-radius: 50%;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+      }
+      input:checked + .toggle-slider {
+        background-color: var(--accent-color);
+      }
+      input:checked + .toggle-slider:before {
+        transform: translateX(22px);
+      }
+
+      @keyframes toast-in-right {
+        from {
+          transform: translateX(100%);
+        }
+        to {
+          transform: translateX(0);
+        }
+      }
+      .animate-toast-in-right {
+        animation: toast-in-right 0.5s ease-out forwards;
+      }
+      
+      /* New styles for glow, login page, etc. */
+      @keyframes subtle-glow {
+        from {
+          box-shadow: 0 0 6px var(--accent-color), 0 0 8px var(--secondary-color), 0 0 4px var(--accent-color) inset;
+        }
+        to {
+          box-shadow: 0 0 12px var(--accent-color), 0 0 16px var(--secondary-color), 0 0 4px var(--accent-color) inset;
+        }
+      }
+      html:not([data-theme="dark"]) .interactive-glow-light {
+        animation: subtle-glow 2s infinite alternate ease-in-out;
+      }
+
+      .login-input {
+        transition: all 0.2s ease-in-out;
+      }
+      .login-input:focus {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px var(--glow-shadow-color);
+      }
+
+      .login-video-bg {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          z-index: 0;
+          filter: brightness(0.4);
+      }
+      
+      @keyframes fade-in-up {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .animate-fade-in-up {
+        animation: fade-in-up 0.6s ease-out forwards;
+      }
+
+      /* Page Transition Styles */
+      @keyframes slide-out-left {
+        from { transform: translateX(0); }
+        to { transform: translateX(-100%); }
+      }
+      @keyframes slide-out-right {
+        from { transform: translateX(0); }
+        to { transform: translateX(100%); }
+      }
+      @keyframes slide-in-from-left {
+        from { transform: translateX(-100%); }
+        to { transform: translateX(0); }
+      }
+      @keyframes slide-in-from-right {
+        from { transform: translateX(100%); }
+        to { transform: translateX(0); }
+      }
+
+      .page-container {
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        height: 100%; width: 100%;
+        background-color: var(--frame-bg-color);
+      }
+
+      .slide-out-left { animation: slide-out-left 0.3s ease-out forwards; }
+      .slide-out-right { animation: slide-out-right 0.3s ease-out forwards; }
+      .slide-in-from-left { animation: slide-in-from-left 0.3s ease-out forwards; }
+      .slide-in-from-right { animation: slide-in-from-right 0.3s ease-out forwards; }
+
+      /* Comments Modal */
+      @keyframes slide-in-up {
+        from { transform: translateY(100%); }
+        to { transform: translateY(0); }
+      }
+      .animate-slide-in-up {
+        animation: slide-in-up 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+      }
+
+      /* Skeleton Loader */
+      .skeleton-sidebar {
+        position: absolute;
+        bottom: 25%;
+        right: 1rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1.25rem;
+      }
+      .skeleton-info {
+        position: absolute;
+        bottom: 4rem;
+        left: 1rem;
+        width: 70%;
+      }
+      .skeleton-progress {
+        position: absolute;
+        bottom: 2rem;
+        left: 1rem;
+        width: calc(100% - 2rem);
+      }
+
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.29.0"
+  }
+}
+</script>
+</head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>

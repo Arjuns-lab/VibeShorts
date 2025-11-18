@@ -1,0 +1,8 @@
+{
+  "name": "VibeShorts",
+  "description": "A modern, visually-stunning short-form video sharing application, similar to TikTok or Instagram Reels. It provides a seamless, infinite-scrolling video feed with interactive UI elements for liking, commenting, and sharing.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
