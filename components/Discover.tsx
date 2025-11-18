@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import { VideoPost } from '../types';
@@ -33,9 +34,13 @@ const Discover: React.FC<DiscoverProps> = ({ posts }) => {
     }, [isLoadingMore]);
 
     useEffect(() => {
-        // Initial load
-        setDiscoverPosts([...posts].sort(() => 0.5 - Math.random()));
-    }, [posts]);
+        // Initial load of posts for the discover feed.
+        if (posts.length > 0 && discoverPosts.length === 0) {
+            setDiscoverPosts([...posts].sort(() => 0.5 - Math.random()));
+        }
+    }, [posts, discoverPosts]);
+    
+    const isSearchActive = searchTerm.trim().length > 0;
     
     useEffect(() => {
         const handleScroll = () => {
@@ -50,7 +55,7 @@ const Discover: React.FC<DiscoverProps> = ({ posts }) => {
         const currentRef = mainContentRef.current;
         currentRef?.addEventListener('scroll', handleScroll);
         return () => currentRef?.removeEventListener('scroll', handleScroll);
-    }, [isLoadingMore, loadMorePosts, mainContentRef]);
+    }, [isLoadingMore, loadMorePosts, isSearchActive]);
 
 
     const formatCount = (count: number): string => {
@@ -95,19 +100,18 @@ const Discover: React.FC<DiscoverProps> = ({ posts }) => {
         }
     };
     
-    const isSearchActive = searchTerm.trim().length > 0;
-
     const filteredPosts = useMemo(() => {
-        const sourcePosts = isSearchActive ? posts : discoverPosts;
-        if (!isSearchActive) return sourcePosts;
-
+        if (!isSearchActive) {
+            return discoverPosts;
+        }
+        
         const lowercasedTerm = searchTerm.trim().toLowerCase();
-        return sourcePosts.filter(post => 
+        return discoverPosts.filter(post => 
             post.caption.toLowerCase().includes(lowercasedTerm) ||
             post.user.username.toLowerCase().includes(lowercasedTerm) ||
             post.songTitle.toLowerCase().includes(lowercasedTerm)
         );
-    }, [posts, discoverPosts, searchTerm, isSearchActive]);
+    }, [discoverPosts, searchTerm, isSearchActive]);
 
     return (
         <div className="h-full w-full bg-[var(--frame-bg-color)] text-[var(--text-color)] flex flex-col transition-colors duration-300">
