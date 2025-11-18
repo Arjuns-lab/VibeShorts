@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { VideoPost, TextOverlay, User } from '../types';
-import { HeartIcon, CommentIcon, ShareIcon, MusicDiscIcon, DownloadIcon, FullScreenIcon, FullScreenExitIcon, VolumeOnIcon, VolumeOffIcon, PlaybackSpeedIcon, AutoscrollIcon, PlayIcon, PauseIcon, CoinIcon, GiftIcon, ShareSolidIcon } from '../constants';
+import { HeartIcon, CommentIcon, ShareIcon, MusicDiscIcon, DownloadIcon, FullScreenIcon, FullScreenExitIcon, VolumeOnIcon, VolumeOffIcon, PlaybackSpeedIcon, AutoscrollIcon, PlayIcon, PauseIcon, CoinIcon, GiftIcon, ShareSolidIcon, GIFTS } from '../constants';
 
 interface VideoPlayerProps {
   post: VideoPost;
@@ -98,6 +98,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ post, onView, onFullScreenTog
   const [showCoinAnimation, setShowCoinAnimation] = useState(false);
   const [showTipAnimation, setShowTipAnimation] = useState(false);
   const [isTippingModalOpen, setIsTippingModalOpen] = useState(false);
+  const [isGiftTrayOpen, setIsGiftTrayOpen] = useState(false);
+  const [animatingGift, setAnimatingGift] = useState<{ key: number; emoji: string } | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [bufferedAmount, setBufferedAmount] = useState(0);
@@ -174,6 +176,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ post, onView, onFullScreenTog
   };
 
   const handleContainerClick = () => {
+      if (isGiftTrayOpen) {
+        setIsGiftTrayOpen(false);
+        return;
+      }
       if (Math.abs(swipeState.deltaX) > 20) return;
       if (tapTimeout.current !== null) {
           clearTimeout(tapTimeout.current);
@@ -253,6 +259,22 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ post, onView, onFullScreenTog
       setTimeout(() => setShowTipAnimation(false), 3000);
     }
   }
+  
+  const handleGiftButtonClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsGiftTrayOpen(prev => !prev);
+  };
+  
+  const handleSendGift = (gift: { emoji: string; cost: number }) => {
+    const success = onTipCreator(post.user, gift.cost);
+    if(success) {
+      setAnimatingGift({ key: Date.now(), emoji: gift.emoji });
+      setTimeout(() => setAnimatingGift(null), 1200);
+      setShowTipAnimation(true);
+      setTimeout(() => setShowTipAnimation(false), 3000);
+    }
+    setIsGiftTrayOpen(false);
+  };
 
   const handleProgress = () => {
     if (videoRef.current && videoRef.current.buffered.length > 0) {
@@ -399,7 +421,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ post, onView, onFullScreenTog
             </div>
             
             {showCoinAnimation && (<div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-none animate-coin-rise flex items-center gap-2 bg-yellow-400/90 text-black font-bold py-2 px-3 rounded-full shadow-lg backdrop-blur-sm"><CoinIcon className="w-6 h-6" /><span>+10</span></div>)}
-            {showTipAnimation && (<div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-none animate-fade-in-out flex items-center gap-2 bg-green-500/90 text-white font-bold py-2 px-4 rounded-full shadow-lg backdrop-blur-sm"><span>Sent Tip!</span></div>)}
+            {showTipAnimation && (<div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-none animate-fade-in-out flex items-center gap-2 bg-green-500/90 text-white font-bold py-2 px-4 rounded-full shadow-lg backdrop-blur-sm"><span>Gift Sent!</span></div>)}
             {showLikeAnimation && (<div className="absolute inset-0 flex justify-center items-center z-20 pointer-events-none"><HeartIcon filled className="w-32 h-32 text-[var(--accent-color)] drop-shadow-lg animate-heart-pop" /></div>)}
             {!isPlaying && (<div className="absolute text-white/70 pointer-events-none drop-shadow-lg"><svg className="w-20 h-20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,2C6.5,2,2,6.5,2,12s4.5,10,10,10s10-4.5,10-10S17.5,2,12,2z M10,16.5v-9l6,4.5L10,16.5z"/></svg></div>)}
 
@@ -445,7 +467,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ post, onView, onFullScreenTog
                         <button className="flex flex-col items-center" onClick={e => {e.stopPropagation(); handleLikeButtonClick();}}><HeartIcon filled={post.isLiked} className={`w-10 h-10 transition-colors duration-200 ${post.isLiked ? 'text-[var(--accent-color)]' : 'text-white'}`}/><span className="text-sm font-bold">{formatCount(post.likes)}</span></button>
                         <button className="flex flex-col items-center" onClick={e => { e.stopPropagation(); onOpenComments(post);}}><CommentIcon className="w-9 h-9 text-white" strokeWidth="2"/><span className="text-sm font-bold">{formatCount(post.comments)}</span></button>
                         <button className="flex flex-col items-center" onClick={e => { e.stopPropagation(); onSwipeToShare(post);}}><ShareIcon className="w-9 h-9 text-white" strokeWidth="2"/><span className="text-sm font-bold">{formatCount(post.shares)}</span></button>
-                        <button className="flex flex-col items-center" onClick={e => {e.stopPropagation(); setIsTippingModalOpen(true);}}><GiftIcon className="w-9 h-9 text-white" strokeWidth="2"/><span className="text-sm font-bold">Tip</span></button>
+                        <button className="flex flex-col items-center" onClick={handleGiftButtonClick}><GiftIcon className="w-9 h-9 text-white" strokeWidth="2"/><span className="text-sm font-bold">Tip</span></button>
                         <button className="flex flex-col items-center" onClick={e => {e.stopPropagation(); handleDownload();}}><DownloadIcon className="w-9 h-9 text-white" strokeWidth="2"/><span className="text-sm font-bold">Download</span></button>
                         <div className="w-12 h-12 relative mt-2"><MusicDiscIcon className="w-full h-full text-white/80 animate-spin" style={{ animationDuration: '6s' }}/><img src={post.user.avatarUrl} alt="song cover" className="w-6 h-6 rounded-full object-cover absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"/></div>
                     </div>
@@ -479,6 +501,33 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ post, onView, onFullScreenTog
                 </div>
             )}
         </div>
+        {isGiftTrayOpen && (
+            <div className="absolute bottom-[10.5rem] right-20 z-20 bg-black/50 backdrop-blur-md p-2 rounded-full flex items-center gap-2 animate-gift-tray-in">
+                {GIFTS.map(gift => (
+                    <button 
+                        key={gift.name}
+                        onClick={(e) => { e.stopPropagation(); handleSendGift(gift); }}
+                        disabled={currentUser.vibeCoinBalance < gift.cost}
+                        className="flex flex-col items-center justify-center gap-1 p-1 rounded-full hover:bg-white/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed group"
+                    >
+                        <span className="text-3xl group-hover:scale-110 transition-transform">{gift.emoji}</span>
+                        <div className="flex items-center gap-0.5 text-xs font-bold text-yellow-300">
+                            <CoinIcon className="w-3 h-3" />
+                            <span>{gift.cost}</span>
+                        </div>
+                    </button>
+                ))}
+            </div>
+        )}
+        
+        {animatingGift && (
+            <div 
+                key={animatingGift.key} 
+                className="absolute bottom-36 right-8 text-5xl z-30 animate-gift-fly pointer-events-none"
+            >
+                {animatingGift.emoji}
+            </div>
+        )}
     </section>
   );
 };

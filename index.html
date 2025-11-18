@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -105,6 +106,24 @@
       }
       .upload-btn-animated {
         animation: pulse-glow 2.5s infinite ease-in-out;
+      }
+
+      @keyframes gift-tray-in {
+        from { transform: scaleX(0.5) translateX(50%); opacity: 0; }
+        to { transform: scaleX(1) translateX(0); opacity: 1; }
+      }
+      .animate-gift-tray-in {
+        animation: gift-tray-in 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+        transform-origin: right;
+      }
+
+      @keyframes gift-fly {
+        0% { transform: translate(0, 0) scale(0.5) rotate(0deg); opacity: 1; }
+        20% { transform: translate(10px, -40px) scale(1.2) rotate(-15deg); }
+        100% { transform: translate(-150px, -300px) scale(0.5) rotate(45deg); opacity: 0; }
+      }
+      .animate-gift-fly {
+        animation: gift-fly 1.2s ease-in forwards;
       }
       
       @keyframes shimmer {

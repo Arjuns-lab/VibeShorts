@@ -1,11 +1,5 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Notification } from '../types';
-import { HeartIcon, CommentIcon, UserIcon, BellIcon } from '../constants';
-
-interface NotificationsProps {
-    notifications: Notification[];
-    onMarkAsRead: () => void;
-}
 
 const timeSince = (date: string) => {
     const seconds = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000);
@@ -22,72 +16,70 @@ const timeSince = (date: string) => {
     return Math.floor(seconds) + "s";
 };
 
-const NotificationItem: React.FC<{ notification: Notification }> = ({ notification }) => {
-    const getIcon = () => {
-        switch (notification.type) {
-            case 'like': return <HeartIcon className="w-6 h-6 text-red-500" filled />;
-            case 'comment': return <CommentIcon className="w-6 h-6 text-blue-500" />;
-            case 'follow': return <UserIcon className="w-6 h-6 text-green-500" />;
-            default: return null;
-        }
-    };
-
-    const getText = () => {
-        const username = <span className="font-bold">@{notification.user.username}</span>;
-        switch (notification.type) {
-            case 'like': return <>{username} liked your video.</>;
-            case 'comment': return <>{username} commented: "{notification.commentText}"</>;
-            case 'follow': return <>{username} started following you.</>;
-            default: return null;
-        }
-    };
-
-    return (
-        <div className={`flex items-start gap-4 p-3 rounded-2xl transition-colors duration-300 ${!notification.isRead ? 'bg-[var(--accent-color)]/10' : 'bg-transparent'}`}>
-            <div className="relative flex-shrink-0">
-                <img src={notification.user.avatarUrl} alt={notification.user.username} className="w-12 h-12 rounded-full" />
-                <div className="absolute -bottom-1 -right-1 bg-[var(--frame-bg-color)] p-0.5 rounded-full">{getIcon()}</div>
-            </div>
-            <div className="flex-grow">
-                <p className="text-[var(--text-color)] text-base">{getText()}</p>
-                <p className="text-sm opacity-60 mt-0.5">{timeSince(notification.timestamp)} ago</p>
-            </div>
-            {notification.post && (
-                 <img src={notification.post.posterUrl} alt="post thumbnail" className="w-12 h-16 object-cover rounded-md flex-shrink-0" />
-            )}
-        </div>
-    );
-};
-
+interface NotificationsProps {
+    notifications: Notification[];
+    onMarkAsRead: () => void;
+}
 
 const Notifications: React.FC<NotificationsProps> = ({ notifications, onMarkAsRead }) => {
     
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            onMarkAsRead();
-        }, 1000); // Mark as read after 1 second of viewing
-        return () => clearTimeout(timer);
-    }, [onMarkAsRead]);
+    const getNotificationMessage = (notification: Notification) => {
+        const username = <span className="font-bold">@{notification.user.username}</span>;
+        switch(notification.type) {
+            case 'like':
+                return <p>{username} liked your post.</p>;
+            case 'comment':
+                return <p>{username} commented: <span className="italic">"{notification.commentText}"</span></p>;
+            case 'follow':
+                return <p>{username} started following you.</p>;
+            default:
+                return null;
+        }
+    };
+
+    const hasUnread = notifications.some(n => !n.isRead);
 
     return (
-        <div className="h-full w-full bg-[var(--frame-bg-color)] text-[var(--text-color)] flex flex-col transition-colors duration-300">
-            <header className="flex-shrink-0 p-4 border-b-2 border-[var(--border-color)] transition-colors duration-300">
-                <h1 className="text-2xl font-black font-display text-center">Notifications</h1>
+        <div className="h-full w-full bg-[var(--bg-color)] text-[var(--text-color)] flex flex-col transition-colors duration-300 font-display">
+            <header className="flex-shrink-0 p-4 flex justify-between items-center border-b-2 border-[var(--border-color)]">
+                <div className="w-20"></div> {/* Spacer */}
+                <h1 className="text-2xl font-black text-center">Notifications</h1>
+                <button 
+                    onClick={onMarkAsRead} 
+                    disabled={!hasUnread}
+                    className="text-sm font-bold text-[var(--accent-color)] hover:underline flex-shrink-0 w-20 text-right disabled:opacity-50 disabled:cursor-not-allowed disabled:no-underline"
+                >
+                    Mark all read
+                </button>
             </header>
-            <main className="flex-grow overflow-y-auto p-2">
+            <main className="flex-grow overflow-y-auto">
                 {notifications.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-center text-[var(--text-color)] p-8">
-                        <div className="w-24 h-24 flex items-center justify-center bg-[var(--bg-color)] rounded-full mb-6">
-                            <BellIcon className="w-12 h-12 text-[var(--text-color)] opacity-40" />
+                        <div className="w-24 h-24 flex items-center justify-center bg-[var(--frame-bg-color)] rounded-full mb-6">
+                           <svg xmlns="http://www.w3.org/2000/svg" className="w-12 h-12 text-[var(--text-color)] opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
                         </div>
-                        <h2 className="text-2xl font-black font-display">All Caught Up!</h2>
+                        <h2 className="text-2xl font-black">You're All Caught Up</h2>
                         <p className="mt-2 max-w-xs opacity-70">
-                            You don't have any new notifications right now.
+                            New likes, comments, and followers will appear here.
                         </p>
                     </div>
                 ) : (
-                    <div className="space-y-2">
-                        {notifications.map(n => <NotificationItem key={n.id} notification={n} />)}
+                    <div>
+                        {notifications.map(notification => (
+                            <div key={notification.id} className={`flex items-start gap-4 p-4 border-b border-[var(--border-color)] transition-colors ${!notification.isRead ? 'bg-[var(--accent-color)]/5' : ''}`}>
+                                <img src={notification.user.avatarUrl} alt={notification.user.username} className="w-12 h-12 rounded-full flex-shrink-0" />
+                                <div className="flex-grow">
+                                    <div className="text-base font-medium">{getNotificationMessage(notification)}</div>
+                                    <p className="text-xs opacity-70 mt-1">{timeSince(notification.timestamp)} ago</p>
+                                </div>
+                                {notification.post && (
+                                    <img src={notification.post.posterUrl} alt="post thumbnail" className="w-14 h-14 object-cover rounded-md flex-shrink-0" />
+                                )}
+                                {!notification.isRead && (
+                                    <div className="w-3 h-3 bg-[var(--secondary-color)] rounded-full self-center flex-shrink-0 ml-2"></div>
+                                )}
+                            </div>
+                        ))}
                     </div>
                 )}
             </main>

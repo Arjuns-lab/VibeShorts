@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { VideoPost, User, Notification, Comment } from './types';
 
@@ -466,6 +467,13 @@ export const CoinIcon = (props: React.SVGProps<SVGSVGElement>) => (
         <text x="12" y="14.5" textAnchor="middle" fontSize="5" fontWeight="bold" fill="white">$</text>
     </svg>
 );
+
+export const GIFTS = [
+  { emoji: '❤️', cost: 10, name: 'Heart' },
+  { emoji: '🔥', cost: 50, name: 'Fire' },
+  { emoji: '🚀', cost: 100, name: 'Rocket' },
+  { emoji: '💎', cost: 500, name: 'Diamond' },
+];
 
 export const GiftIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
