@@ -1,7 +1,7 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { User, VideoPost } from '../types';
-import { SettingsIcon, GridIcon, HeartIcon, CoinIcon, BarChartIcon } from '../constants';
+import { SettingsIcon, GridIcon, HeartIcon, WalletBellIcon, NoPostsIcon, BarChartIcon, CameraIcon } from '../constants';
 import CreatorDashboard from './CreatorDashboard';
 
 interface ProfileProps {
@@ -12,94 +12,137 @@ interface ProfileProps {
     onToggleFollow: (userId: string) => void;
     onOpenSettings: () => void;
     onOpenWallet: () => void;
+    onUpdateAvatar: (file: File) => void;
+    onOpenPayoutSetup: () => void;
 }
 
-const Profile: React.FC<ProfileProps> = ({ profileUser, currentUser, posts, isFollowing, onToggleFollow, onOpenSettings, onOpenWallet }) => {
-    
-    const [activeTab, setActiveTab] = useState<'videos' | 'dashboard'>('videos');
-    
+const Profile: React.FC<ProfileProps> = ({ profileUser, currentUser, posts, isFollowing, onToggleFollow, onOpenSettings, onOpenWallet, onUpdateAvatar, onOpenPayoutSetup }) => {
+    const [activeTab, setActiveTab] = useState<'posts' | 'dashboard'>('posts');
+    const avatarInputRef = useRef<HTMLInputElement>(null);
+
     const formatCount = (count: number): string => {
         if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
         if (count >= 1000) return `${(count / 1000).toFixed(1)}K`;
-        return count.toString();
+        return String(count);
     };
     
     const isCurrentUserProfile = profileUser.id === currentUser.id;
 
-    const handleEditProfileClick = () => {
-        if (window.confirm('Are you sure you want to edit your profile?')) {
-            // In a real app, you would navigate to an edit page or open a modal here.
-            console.log('Proceeding to edit profile...');
+    const handleAvatarClick = () => {
+        if (isCurrentUserProfile) {
+            avatarInputRef.current?.click();
         }
     };
 
+    const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            onUpdateAvatar(file);
+        }
+    };
+
+    const StatItem: React.FC<{ value: string | number; label: string }> = ({ value, label }) => (
+        <div className="text-center">
+            <p className="text-xl font-black font-display">{formatCount(Number(value))}</p>
+            <p className="text-sm text-[var(--text-color)]/70 font-semibold">{label}</p>
+        </div>
+    );
+
     return (
-        <div className="h-full w-full bg-[var(--frame-bg-color)] text-[var(--text-color)] flex flex-col transition-colors duration-300">
+        <div className="h-full w-full bg-[var(--bg-color)] text-[var(--text-color)] flex flex-col transition-colors duration-300">
+            {/* Header */}
             <header className="flex-shrink-0 flex justify-between items-center p-4 border-b-2 border-[var(--border-color)]">
-                <div className="w-8"></div> {/* Placeholder for alignment */}
+                <div className="w-8"></div>
                 <h1 className="text-2xl font-black font-display text-center">@{profileUser.username}</h1>
                 {isCurrentUserProfile ? (
                     <button onClick={onOpenSettings} className="p-1 rounded-full hover:bg-[var(--text-color)]/10">
                         <SettingsIcon className="w-7 h-7" />
                     </button>
                 ) : (
-                    <div className="w-8"></div> /* Placeholder */
+                    <div className="w-8"></div>
                 )}
             </header>
 
+            {/* Main Content */}
             <main className="flex-grow overflow-y-auto">
-                <div className="p-6 flex flex-col items-center">
-                    <img src={profileUser.avatarUrl} alt={profileUser.username} className="w-28 h-28 rounded-full object-cover p-1 bg-[var(--frame-bg-color)] border-2 border-[var(--border-color)]" />
-                    <p className="text-center mt-4 font-medium opacity-80">{profileUser.bio}</p>
+                {/* Profile Info & Stats */}
+                <div className="pt-6 px-6 flex flex-col items-center">
+                    <div 
+                        className={`relative group ${isCurrentUserProfile ? 'cursor-pointer' : ''}`}
+                        onClick={handleAvatarClick}
+                        role={isCurrentUserProfile ? 'button' : undefined}
+                        tabIndex={isCurrentUserProfile ? 0 : -1}
+                        aria-label={isCurrentUserProfile ? 'Change profile picture' : undefined}
+                    >
+                        <img src={profileUser.avatarUrl} alt={profileUser.username} className="w-28 h-28 rounded-full object-cover p-1 bg-white border-4 border-[var(--frame-bg-color)] shadow-lg" />
+                        {isCurrentUserProfile && (
+                            <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <CameraIcon className="w-8 h-8 text-white" />
+                            </div>
+                        )}
+                    </div>
+                     {isCurrentUserProfile && (
+                        <input
+                            type="file"
+                            accept="image/*"
+                            ref={avatarInputRef}
+                            onChange={handleAvatarChange}
+                            className="hidden"
+                            aria-hidden="true"
+                        />
+                    )}
+                    <p className="text-center mt-4 font-medium opacity-80 max-w-sm">
+                        {profileUser.bio}
+                    </p>
                 </div>
-
-                <div className="grid grid-cols-4 justify-around items-center px-4 py-2 text-center">
-                    <div className="font-display"><p className="text-2xl font-black">{formatCount(profileUser.followingCount)}</p><p className="text-sm opacity-70 font-bold">Following</p></div>
-                    <div className="font-display"><p className="text-2xl font-black">{formatCount(profileUser.followerCount)}</p><p className="text-sm opacity-70 font-bold">Followers</p></div>
-                    <div className="font-display"><p className="text-2xl font-black">{formatCount(profileUser.totalLikes)}</p><p className="text-sm opacity-70 font-bold">Likes</p></div>
-                    <div className="font-display"><p className="text-2xl font-black">{formatCount(profileUser.vibeCoinBalance)}</p><p className="text-sm opacity-70 font-bold">VibeCoins</p></div>
+                
+                <div className="grid grid-cols-4 gap-4 px-6 py-6">
+                    <StatItem value={profileUser.followingCount} label="Following" />
+                    <StatItem value={profileUser.followerCount} label="Followers" />
+                    <StatItem value={profileUser.totalLikes} label="Likes" />
+                    <StatItem value={profileUser.vibeCoinBalance} label="VibeCoins" />
                 </div>
-
-                <div className="p-4 flex gap-3">
-                    {isCurrentUserProfile ? (
-                        <>
-                             <button onClick={handleEditProfileClick} className="w-1/2 py-3 text-lg font-bold text-center border-2 border-[var(--border-color)] rounded-xl hover:bg-[var(--text-color)]/5 transition-colors">
-                                Edit Profile
-                            </button>
-                            <button onClick={onOpenWallet} className="w-1/2 py-3 text-lg font-bold text-center border-2 border-[var(--border-color)] rounded-xl hover:bg-[var(--text-color)]/5 transition-colors flex items-center justify-center gap-2">
-                                <CoinIcon className="w-6 h-6" /> My Wallet
-                            </button>
-                        </>
-                    ) : (
+                
+                {/* Action Buttons */}
+                {isCurrentUserProfile ? (
+                    <div className="grid grid-cols-2 gap-4 px-6 pb-6">
+                        <button onClick={onOpenSettings} className="bg-[var(--frame-bg-color)] text-center py-4 rounded-2xl font-bold text-lg border-2 border-[var(--border-color)] hover:bg-[var(--border-color)] transition-colors">
+                            Edit Profile
+                        </button>
+                        <button onClick={onOpenWallet} className="bg-[var(--frame-bg-color)] flex items-center justify-center gap-3 py-2.5 rounded-2xl font-bold text-lg border-2 border-[var(--border-color)] hover:bg-[var(--border-color)] transition-colors">
+                            <div className="w-12 h-12 bg-yellow-400 rounded-full flex items-center justify-center">
+                                <WalletBellIcon className="w-7 h-7 text-white" />
+                            </div>
+                            <span>My Wallet</span>
+                        </button>
+                    </div>
+                ) : (
+                    <div className="px-6 pb-6">
                         <button 
                             onClick={() => onToggleFollow(profileUser.id)}
-                            className={`w-full py-3 text-lg font-bold rounded-xl transition-all duration-200 hover:scale-105 ${isFollowing ? 'bg-[var(--bg-color)] border-2 border-[var(--border-color)] text-[var(--text-color)]' : 'text-white bg-gradient-to-br from-[var(--accent-color)] to-[var(--secondary-color)]'}`}
+                            className={`w-full py-3 text-lg font-bold rounded-xl transition-all duration-200 hover:scale-105 ${isFollowing ? 'bg-[var(--frame-bg-color)] border-2 border-[var(--border-color)] text-[var(--text-color)]' : 'text-white bg-gradient-to-br from-[var(--accent-color)] to-[var(--secondary-color)]'}`}
                         >
                             {isFollowing ? 'Following' : 'Follow'}
                         </button>
-                    )}
+                    </div>
+                )}
+
+                {/* Tabs */}
+                <div className="border-t-2 border-[var(--border-color)] grid grid-cols-2">
+                    <button onClick={() => setActiveTab('posts')} className="flex justify-center items-center py-3 relative">
+                        <GridIcon className={`w-7 h-7 ${activeTab === 'posts' ? 'text-[var(--accent-color)]' : 'text-[var(--text-color)]/50'}`} />
+                        {activeTab === 'posts' && <div className="absolute bottom-0 h-1 w-full bg-[var(--accent-color)] rounded-t-full"></div>}
+                    </button>
+                    <button onClick={() => isCurrentUserProfile && setActiveTab('dashboard')} className="flex justify-center items-center py-3 relative" disabled={!isCurrentUserProfile}>
+                        <BarChartIcon className={`w-7 h-7 ${activeTab === 'dashboard' ? 'text-[var(--accent-color)]' : 'text-[var(--text-color)]/50'} ${!isCurrentUserProfile ? 'opacity-20 cursor-not-allowed' : ''}`} />
+                        {activeTab === 'dashboard' && <div className="absolute bottom-0 h-1 w-full bg-[var(--accent-color)] rounded-t-full"></div>}
+                    </button>
                 </div>
                 
-                 <div className="border-t-2 border-[var(--border-color)] grid grid-cols-2">
-                    <button 
-                        onClick={() => setActiveTab('videos')}
-                        className={`py-3 flex justify-center items-center transition-colors ${activeTab === 'videos' ? 'text-[var(--accent-color)] border-t-2 border-[var(--accent-color)] -mt-[2px]' : 'opacity-50'}`}
-                    >
-                         <GridIcon className="w-7 h-7" />
-                    </button>
-                    {isCurrentUserProfile && (
-                        <button 
-                             onClick={() => setActiveTab('dashboard')}
-                            className={`py-3 flex justify-center items-center transition-colors ${activeTab === 'dashboard' ? 'text-[var(--accent-color)] border-t-2 border-[var(--accent-color)] -mt-[2px]' : 'opacity-50'}`}
-                        >
-                             <BarChartIcon className="w-7 h-7" />
-                        </button>
-                    )}
-                </div>
-
-                {activeTab === 'videos' && (
+                {/* Tab Content */}
+                {activeTab === 'posts' && (
                     <div className="grid grid-cols-3 gap-1 p-1">
-                        {posts.map(post => (
+                        {posts.length > 0 ? posts.map(post => (
                             <div key={post.id} className="aspect-[9/16] relative bg-[var(--bg-color)] rounded-md overflow-hidden group profile-video-thumb">
                                 <img src={post.posterUrl} alt={post.caption} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
@@ -108,19 +151,17 @@ const Profile: React.FC<ProfileProps> = ({ profileUser, currentUser, posts, isFo
                                     <span>{formatCount(post.likes)}</span>
                                 </div>
                             </div>
-                        ))}
-                         {posts.length === 0 && (
-                            <div className="col-span-3 flex flex-col items-center justify-center h-48 opacity-60 text-center">
-                                <svg className="w-16 h-16 mb-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M14.7,4.3C14.2,3.8,13.6,3.4,13,3.2C12.4,3,11.7,2.9,11,3c-0.7,0-1.4,0.2-2,0.5c-0.6,0.3-1.2,0.7-1.7,1.2L3,9"></path><path d="M9,3l1.7,1.2C11.3,4.7,11.8,5,12.4,5.1c0.6,0.1,1.2,0,1.8-0.2c-0.6-0.2-1.2-0.6-1.6-1L17,3"></path><path d="M21,15l-4.2-3.8C16.2,10.7,15.7,10.4,15.1,10.3c-0.6-0.1-1.2,0-1.8,0.2c-0.6,0.2-1.2,0.6-1.6,1L9,13"></path><line x1="3" y1="21" x2="21" y2="3"></line></svg>
-                                <h2 className="text-xl font-bold">No Posts Yet</h2>
-                                <p>Videos you upload will appear here.</p>
+                        )) : (
+                            <div className="col-span-3 flex flex-col items-center justify-center h-48 opacity-50">
+                                <NoPostsIcon className="w-20 h-20" />
+                                <p className="mt-2 font-bold text-lg">No Posts Yet</p>
                             </div>
                         )}
                     </div>
                 )}
-                
+
                 {activeTab === 'dashboard' && isCurrentUserProfile && (
-                    <CreatorDashboard user={profileUser} posts={posts} />
+                    <CreatorDashboard user={currentUser} posts={posts} onOpenPayoutSetup={onOpenPayoutSetup} />
                 )}
 
             </main>

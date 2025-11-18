@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { MOCK_VIDEO_POSTS, CURRENT_USER, ArrowDownIcon, CoinIcon, MOCK_NOTIFICATIONS, MOCK_COMMENTS, USERS } from './constants';
+import { MOCK_VIDEO_POSTS, CURRENT_USER, ArrowDownIcon, CoinIcon, MOCK_NOTIFICATIONS, MOCK_COMMENTS, USERS, UpiIcon, HeartIcon } from './constants';
 import { VideoPost, User, TextOverlay, Transaction, Notification, Comment } from './types';
 import VideoPlayer from './components/VideoPlayer';
 import BottomNav from './components/BottomNav';
@@ -32,6 +32,67 @@ const DAILY_CHALLENGE_BONUS = 50;
 const SWIPE_EDGE_WIDTH = 40; // px for navigation swipe
 const SWIPE_NAV_THRESHOLD = 80; // px to trigger navigation
 
+// Payout Setup Modal Component
+const PayoutSetupModal: React.FC<{ currentUser: User; onClose: () => void; onSave: (upiId: string) => void; }> = ({ currentUser, onClose, onSave }) => {
+    const [upiId, setUpiId] = useState(currentUser.upiId || '');
+    const [error, setError] = useState('');
+
+    const handleSave = () => {
+        if (!upiId.trim() || !upiId.includes('@')) {
+            setError('Please enter a valid UPI ID (e.g., yourname@bank).');
+            return;
+        }
+        onSave(upiId);
+        onClose();
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-center items-end sm:items-center" onClick={onClose}>
+            <div className="bg-[var(--frame-bg-color)] text-[var(--text-color)] w-full max-w-sm rounded-t-3xl sm:rounded-3xl p-6 flex flex-col gap-4 font-display" onClick={e => e.stopPropagation()}>
+                <h2 className="text-2xl font-black text-center">Set Up Payouts</h2>
+                <p className="text-center opacity-70 text-sm">Enter your UPI ID to receive payments directly to your bank account.</p>
+                <div className="relative">
+                    <UpiIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-6 h-6 text-[var(--text-color)]/40" />
+                    <input
+                        type="text"
+                        value={upiId}
+                        onChange={(e) => { setUpiId(e.target.value); setError(''); }}
+                        placeholder="yourname@bank"
+                        className="w-full bg-[var(--bg-color)] border-2 border-[var(--border-color)] rounded-xl py-3 pl-12 pr-3 focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] font-medium text-base"
+                    />
+                </div>
+                {error && <p className="text-red-500 text-sm font-semibold">{error}</p>}
+                <div className="flex gap-2 mt-2">
+                    <button onClick={onClose} className="w-full py-3 font-bold border-2 border-[var(--border-color)] rounded-xl hover:bg-[var(--text-color)]/10">Cancel</button>
+                    <button onClick={handleSave} className="w-full py-3 font-bold text-white bg-[var(--accent-color)] rounded-xl">Save</button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// Suggested Users Component for Empty Following Feed
+const SuggestedUsers: React.FC<{ users: User[], currentUser: User, onToggleFollow: (userId: string) => void }> = ({ users, currentUser, onToggleFollow }) => (
+    <div className="h-full w-full snap-start flex flex-col text-white p-4 pt-20 overflow-y-auto">
+        <h2 className="text-2xl font-black font-display text-center">Suggested For You</h2>
+        <p className="text-center opacity-80 mb-6">Follow some creators to fill your feed!</p>
+        <div className="space-y-4">
+            {users.filter(u => u.id !== currentUser.id).slice(0, 5).map(user => (
+                <div key={user.id} className="bg-white/10 backdrop-blur-md p-3 rounded-2xl flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <img src={user.avatarUrl} alt={user.username} className="w-14 h-14 rounded-full"/>
+                        <div>
+                            <p className="font-bold text-lg">@{user.username}</p>
+                            <p className="text-sm opacity-80 truncate w-40">{user.bio}</p>
+                        </div>
+                    </div>
+                    <button onClick={() => onToggleFollow(user.id)} className="px-5 py-2 rounded-full font-bold bg-[var(--accent-color)] text-white hover:scale-105 transition-transform">Follow</button>
+                </div>
+            ))}
+        </div>
+    </div>
+);
+
 const App: React.FC = () => {
   const [videoPosts, setVideoPosts] = useState<VideoPost[]>([]);
   const [allComments, setAllComments] = useState<{ [postId: string]: Comment[] }>(MOCK_COMMENTS);
@@ -46,6 +107,7 @@ const App: React.FC = () => {
   const [shareModalData, setShareModalData] = useState<VideoPost | null>(null);
   const [commentsModalPost, setCommentsModalPost] = useState<VideoPost | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isPayoutSetupOpen, setIsPayoutSetupOpen] = useState(false);
   
   // Navigation State
   const [navigationHistory, setNavigationHistory] = useState<NavState[]>([{ page: 'feed' }]);
@@ -139,7 +201,7 @@ const App: React.FC = () => {
     setIsSettingsOpen(false);
   };
 
-  const handlePostVideo = (data: { videoFile: File; caption: string; textOverlays: TextOverlay[]; filterClass: string; startTime: number; endTime: number; }) => {
+  const handlePostVideo = (data: { videoFile: File; caption: string; hashtags: string[]; textOverlays: TextOverlay[]; filterClass: string; startTime: number; endTime: number; videoQuality: 'SD' | 'HD' | '4K' }) => {
     if (!currentUser) return;
     const newVideoUrl = URL.createObjectURL(data.videoFile);
     const newPost: VideoPost = {
@@ -148,6 +210,7 @@ const App: React.FC = () => {
       videoUrl: newVideoUrl,
       posterUrl: currentUser.avatarUrl,
       caption: data.caption,
+      hashtags: data.hashtags,
       songTitle: 'Original Sound • ' + currentUser.username,
       likes: 0,
       comments: 0,
@@ -157,6 +220,7 @@ const App: React.FC = () => {
       filterClass: data.filterClass,
       startTime: data.startTime,
       endTime: data.endTime,
+      quality: data.videoQuality,
     };
     setVideoPosts(prevPosts => [newPost, ...prevPosts]);
     resetTo('feed');
@@ -193,6 +257,23 @@ const App: React.FC = () => {
       }
   };
 
+  const handleUpdateBio = (newBio: string) => {
+    if (!currentUser) return;
+    setCurrentUser(prevUser => {
+        if (!prevUser) return null;
+        return { ...prevUser, bio: newBio };
+    });
+  };
+
+  const handleUpdateAvatar = (newAvatarFile: File) => {
+    if (!currentUser) return;
+    const newAvatarUrl = URL.createObjectURL(newAvatarFile);
+    setCurrentUser(prevUser => {
+        if (!prevUser) return null;
+        return { ...prevUser, avatarUrl: newAvatarUrl };
+    });
+  };
+
   const handleEarnCoins = (amount: number, type: 'earn_watch' | 'earn_bonus', description: string) => {
     if (!currentUser) return;
     setCurrentUser(prevUser => {
@@ -220,6 +301,23 @@ const App: React.FC = () => {
     });
     addTransaction({ type: 'tip_sent', amount: -amount, description: `Tipped @${creator.username}`});
     return true;
+  };
+  
+  const handleSetupPayouts = (upiId: string) => {
+      if (!currentUser) return;
+      setCurrentUser(prev => prev ? ({ ...prev, upiId, payoutsSetUp: true }) : null);
+      // In a real app, this would be an API call.
+      alert(`Payouts set up for UPI ID: ${upiId}`);
+  };
+
+  const handleCashOut = (amount: number) => {
+      if (!currentUser || !currentUser.payoutsSetUp || currentUser.vibeCoinBalance < amount) {
+          alert('Cannot process cash out. Check balance and payout setup.');
+          return false;
+      }
+      setCurrentUser(prev => prev ? ({ ...prev, vibeCoinBalance: prev.vibeCoinBalance - amount }) : null);
+      addTransaction({ type: 'cash_out', amount: -amount, description: `Cashed out to ${currentUser.upiId}` });
+      return true;
   };
 
   const handleMarkNotificationsRead = () => {
@@ -324,8 +422,10 @@ const App: React.FC = () => {
         setCommentsModalPost(post);
     };
 
-    const handleAddComment = (postId: string, text: string) => {
+    const handleAddComment = (postData: VideoPost, text: string) => {
         if (!currentUser) return;
+
+        const postId = postData.id;
 
         const newComment: Comment = {
             id: `c-${Date.now()}`,
@@ -334,22 +434,26 @@ const App: React.FC = () => {
             timestamp: new Date().toISOString(),
         };
 
-        const postToUpdate = videoPosts.find(p => p.id === postId);
-
         setAllComments(prev => ({
             ...prev,
             [postId]: [...(prev[postId] || []), newComment],
         }));
 
         setVideoPosts(prev => prev.map(p => p.id === postId ? {...p, comments: p.comments + 1} : p));
-        setCommentsModalPost(prev => prev ? {...prev, comments: prev.comments + 1} : null);
+        
+        setCommentsModalPost(prev => {
+            if (prev && prev.id === postId) {
+                return { ...prev, comments: prev.comments + 1 };
+            }
+            return prev;
+        });
         
         // Add notification if commenting on someone else's post
-        if (postToUpdate && postToUpdate.user.id !== currentUser.id) {
+        if (postData.user.id !== currentUser.id) {
             addNotification({
                 type: 'comment',
                 user: currentUser,
-                post: postToUpdate,
+                post: postData,
                 commentText: text,
             });
         }
@@ -525,10 +629,7 @@ const App: React.FC = () => {
                   <VideoPlayer key={post.id} post={post} onView={handleAddToHistory} onFullScreenToggle={setIsFullScreen} onVideoEnd={handleVideoEnd} isAutoScrollEnabled={isAutoScrollEnabled} onEarnCoins={(amount, type, desc) => handleEarnCoins(amount, type, desc)} onTipCreator={handleTipCreator} currentUser={currentUser} isMuted={isMuted} setIsMuted={setIsMuted} volume={volume} onSwipeToProfile={handleViewProfile} onSwipeToShare={handleOpenShareModal} onLike={handleToggleLike} onOpenComments={handleOpenComments}/>
                 ))
               ) : (
-                <div className="h-full w-full snap-center flex flex-col justify-center items-center text-center text-white/80 p-8">
-                    <h2 className="text-2xl font-black font-display">Nothing to see here... yet!</h2>
-                    <p className="mt-2 max-w-xs">Follow some creators to see their latest videos in your feed.</p>
-                </div>
+                <SuggestedUsers users={Object.values(USERS)} currentUser={currentUser} onToggleFollow={handleToggleFollow} />
               )}
               {isLoadingMore && (
                 <div className="h-full w-full snap-center flex justify-center items-center bg-black">
@@ -550,7 +651,7 @@ const App: React.FC = () => {
         const userToDisplay = currentNavState.viewedUser || currentUser;
         const postsForProfile = videoPosts.filter(p => p.user.id === userToDisplay.id);
         const isFollowing = currentUser.followingIds.includes(userToDisplay.id);
-        return <Profile profileUser={userToDisplay} currentUser={currentUser} posts={postsForProfile} isFollowing={isFollowing} onToggleFollow={handleToggleFollow} onOpenSettings={() => setIsSettingsOpen(true)} onOpenWallet={() => setIsWalletOpen(true)} />;
+        return <Profile profileUser={userToDisplay} currentUser={currentUser} posts={postsForProfile} isFollowing={isFollowing} onToggleFollow={handleToggleFollow} onOpenSettings={() => setIsSettingsOpen(true)} onOpenWallet={() => setIsWalletOpen(true)} onUpdateAvatar={handleUpdateAvatar} onOpenPayoutSetup={() => setIsPayoutSetupOpen(true)} />;
       default:
         return null;
     }
@@ -584,15 +685,20 @@ const App: React.FC = () => {
             <CommentsModal post={commentsModalPost} comments={allComments[commentsModalPost.id] || []} currentUser={currentUser} onAddComment={handleAddComment} onClose={() => setCommentsModalPost(null)} />
         )}
         {isAuthenticated && currentUser && isWalletOpen && (
-            <Wallet user={currentUser} transactions={transactions} onClose={() => setIsWalletOpen(false)} />
+            <Wallet user={currentUser} transactions={transactions} onClose={() => setIsWalletOpen(false)} onOpenPayoutSetup={() => setIsPayoutSetupOpen(true)} onCashOut={handleCashOut} />
         )}
-        {isSettingsOpen && (
+        {isAuthenticated && currentUser && isPayoutSetupOpen && (
+            <PayoutSetupModal currentUser={currentUser} onClose={() => setIsPayoutSetupOpen(false)} onSave={handleSetupPayouts} />
+        )}
+        {isSettingsOpen && currentUser && (
           <Settings 
             theme={theme} setTheme={setTheme} 
             isDataSaverEnabled={isDataSaverEnabled} onDataSaverToggle={setIsDataSaverEnabled}
             isAutoScrollEnabled={isAutoScrollEnabled} onAutoScrollToggle={setIsAutoScrollEnabled}
             onClearHistory={handleClearHistory} onLogout={handleLogout}
-            onClose={() => setIsSettingsOpen(false)} 
+            onClose={() => setIsSettingsOpen(false)}
+            currentUser={currentUser}
+            onUpdateBio={handleUpdateBio}
           />
         )}
         {showBonusToast && (

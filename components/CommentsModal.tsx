@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { VideoPost, Comment, User } from '../types';
 import { XIcon, ShareIcon } from '../constants';
@@ -7,7 +8,7 @@ interface CommentsModalProps {
     comments: Comment[];
     currentUser: User;
     onClose: () => void;
-    onAddComment: (postId: string, text: string) => void;
+    onAddComment: (post: VideoPost, text: string) => void;
 }
 
 const timeSince = (date: string) => {
@@ -73,7 +74,7 @@ const CommentsModal: React.FC<CommentsModalProps> = ({ post, comments, currentUs
         e.preventDefault();
         const trimmedComment = newComment.trim();
         if (trimmedComment) {
-            onAddComment(post.id, trimmedComment);
+            onAddComment(post, trimmedComment);
             setNewComment('');
         }
     };
@@ -95,7 +96,7 @@ const CommentsModal: React.FC<CommentsModalProps> = ({ post, comments, currentUs
 
                 <main className="flex-grow overflow-y-auto p-4 space-y-4 comment-list">
                     {comments.length > 0 ? (
-                        comments.map(comment => (
+                        [...comments].reverse().map(comment => (
                             <div key={comment.id} className="flex items-start gap-3">
                                 <img src={comment.user.avatarUrl} alt={comment.user.username} className="w-10 h-10 rounded-full flex-shrink-0" />
                                 <div className="flex-grow">

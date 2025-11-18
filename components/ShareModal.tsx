@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { VideoPost, User } from '../types';
 import { USERS } from '../constants';
-import { SearchIcon } from '../constants';
+import { SearchIcon, CopyIcon, CheckIcon } from '../constants';
 
 interface ShareModalProps {
     post: VideoPost;
@@ -52,6 +52,7 @@ const useSwipeToClose = ({ onClose, threshold = 100 }: { onClose: () => void; th
 const ShareModal: React.FC<ShareModalProps> = ({ post, currentUser, onClose }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [sentTo, setSentTo] = useState<string[]>([]);
+    const [isLinkCopied, setIsLinkCopied] = useState(false);
     const { touchHandlers, style } = useSwipeToClose({ onClose });
 
     const friends = useMemo(() => {
@@ -75,6 +76,18 @@ const ShareModal: React.FC<ShareModalProps> = ({ post, currentUser, onClose }) =
         }, 800);
     };
 
+    const handleCopyLink = () => {
+        const link = `https://vibeshorts.app/v/${post.id}`;
+        navigator.clipboard.writeText(link).then(() => {
+            setIsLinkCopied(true);
+            setTimeout(() => setIsLinkCopied(false), 2000);
+        }).catch(err => {
+            console.error('Failed to copy link: ', err);
+            alert('Failed to copy link.');
+        });
+    };
+
+
     return (
         <div
             className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-center items-end"
@@ -92,6 +105,21 @@ const ShareModal: React.FC<ShareModalProps> = ({ post, currentUser, onClose }) =
                     <button onClick={onClose} className="absolute top-4 right-4 text-2xl font-bold opacity-60 hover:opacity-100">&times;</button>
                 </header>
                 
+                <div className="p-4 flex-shrink-0 border-b-2 border-[var(--border-color)]">
+                    <h3 className="font-bold text-sm opacity-60 px-1 mb-2">Share to...</h3>
+                    <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                        <button 
+                            onClick={handleCopyLink}
+                            className={`flex flex-col items-center justify-center gap-1.5 w-20 text-center transition-colors ${isLinkCopied ? 'text-green-500' : ''}`}
+                        >
+                            <div className={`w-14 h-14 rounded-full flex items-center justify-center transition-colors ${isLinkCopied ? 'bg-green-500/10' : 'bg-[var(--bg-color)] hover:bg-[var(--border-color)]'}`}>
+                                {isLinkCopied ? <CheckIcon className="w-7 h-7" /> : <CopyIcon className="w-7 h-7" />}
+                            </div>
+                            <span className="text-xs font-semibold">{isLinkCopied ? 'Copied!' : 'Copy Link'}</span>
+                        </button>
+                    </div>
+                </div>
+
                 <div className="p-4 flex-shrink-0">
                     <div className="relative">
                         <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 opacity-40" />

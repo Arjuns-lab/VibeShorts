@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { UserIcon, LockIcon } from '../constants';
+import { UserIcon, LockIcon, MailIcon } from '../constants';
 
 interface LoginProps {
     onLogin: (username: string) => void;
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
+    const [isSignUp, setIsSignUp] = useState(false);
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [email, setEmail] = useState('');
     const [error, setError] = useState('');
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -16,6 +18,19 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             setError('Please enter a username.');
             return;
         }
+        if (isSignUp && !email.trim()) {
+            setError('Please enter an email address.');
+            return;
+        }
+        if (isSignUp && !/\S+@\S+\.\S+/.test(email)) {
+            setError('Please enter a valid email address.');
+            return;
+        }
+        if (!password.trim()) {
+            setError('Please enter a password.');
+            return;
+        }
+
         setError('');
         onLogin(username);
     };
@@ -37,11 +52,26 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                     <h1 className="text-6xl font-brand bg-clip-text text-transparent bg-gradient-to-br from-[var(--accent-color)] to-[var(--secondary-color)]">
                         VibeShorts
                     </h1>
-                    <p className="text-lg font-bold text-white/80 mt-2">Log in to continue</p>
+                    <p className="text-lg font-bold text-white/80 mt-2">
+                        {isSignUp ? 'Create your account' : 'Log in to continue'}
+                    </p>
                 </div>
                 
                 <form onSubmit={handleSubmit} className="w-full flex flex-col gap-4">
-                    <div className="relative animate-fade-in-up" style={{ animationDelay: '200ms', opacity: 0 }}>
+                     {isSignUp && (
+                         <div className="relative animate-fade-in-up" style={{ animationDelay: '200ms', opacity: 0 }}>
+                            <MailIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
+                            <input
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                placeholder="Email"
+                                className="w-full bg-black/40 border-2 border-white/20 rounded-xl py-3 pl-10 pr-3 text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] font-medium text-base login-input"
+                                aria-label="Email"
+                            />
+                        </div>
+                    )}
+                    <div className="relative animate-fade-in-up" style={{ animationDelay: isSignUp ? '300ms' : '200ms', opacity: 0 }}>
                         <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
                         <input
                             type="text"
@@ -52,7 +82,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                             aria-label="Username"
                         />
                     </div>
-                    <div className="relative animate-fade-in-up" style={{ animationDelay: '300ms', opacity: 0 }}>
+                    <div className="relative animate-fade-in-up" style={{ animationDelay: isSignUp ? '400ms' : '300ms', opacity: 0 }}>
                         <LockIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
                         <input
                             type="password"
@@ -69,16 +99,19 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                     <button 
                         type="submit"
                         className="w-full py-3 mt-4 text-lg font-bold text-white bg-gradient-to-br from-[var(--accent-color)] to-[var(--secondary-color)] rounded-xl transition-transform hover:scale-105 shadow-lg interactive-glow-light animate-fade-in-up"
-                        style={{ animationDelay: '400ms', opacity: 0 }}
+                        style={{ animationDelay: isSignUp ? '500ms' : '400ms', opacity: 0 }}
                     >
-                        Log In
+                        {isSignUp ? 'Sign Up' : 'Log In'}
                     </button>
                 </form>
 
-                <div className="text-center mt-8 text-sm font-semibold text-white/70 animate-fade-in-up" style={{ animationDelay: '500ms', opacity: 0 }}>
-                    <a href="#" className="hover:text-white transition-colors">Forgot Password?</a>
+                <div className="text-center mt-8 text-sm font-semibold text-white/70 animate-fade-in-up" style={{ animationDelay: isSignUp ? '600ms' : '500ms', opacity: 0 }}>
+                    {!isSignUp && <a href="#" className="hover:text-white transition-colors">Forgot Password?</a>}
                     <p className="mt-4">
-                        Don't have an account? <a href="#" className="font-bold text-[var(--accent-color)] hover:underline">Sign Up</a>
+                        {isSignUp ? 'Already have an account?' : "Don't have an account?"}
+                        <button onClick={() => { setIsSignUp(!isSignUp); setError(''); }} className="font-bold text-[var(--accent-color)] hover:underline ml-2 bg-transparent border-none p-0">
+                            {isSignUp ? 'Log In' : 'Sign Up'}
+                        </button>
                     </p>
                 </div>
             </div>

@@ -13,6 +13,8 @@ export const USERS: { [key:string]: User } = {
     totalLikes: 123000,
     vibeCoinBalance: 5000,
     followingIds: ['u2', 'u4'],
+    payoutsSetUp: true,
+    upiId: 'codeMaster@upi',
   },
   user2: { 
     id: 'u2', 
@@ -24,6 +26,8 @@ export const USERS: { [key:string]: User } = {
     totalLikes: 54321,
     vibeCoinBalance: 10250,
     followingIds: ['u1', 'u3', 'u5'],
+    payoutsSetUp: true,
+    upiId: 'reactdev@upi',
   },
   user3: { 
     id: 'u3', 
@@ -35,6 +39,7 @@ export const USERS: { [key:string]: User } = {
     totalLikes: 98765,
     vibeCoinBalance: 9876,
     followingIds: ['u2'],
+    payoutsSetUp: false,
   },
   user4: { 
     id: 'u4', 
@@ -46,6 +51,7 @@ export const USERS: { [key:string]: User } = {
     totalLikes: 25000,
     vibeCoinBalance: 2500,
     followingIds: ['u1', 'u5'],
+    payoutsSetUp: false,
   },
   user5: {
     id: 'u5',
@@ -57,6 +63,8 @@ export const USERS: { [key:string]: User } = {
     totalLikes: 850000,
     vibeCoinBalance: 12345,
     followingIds: ['u2', 'u3'],
+    payoutsSetUp: true,
+    upiId: 'travel@upi',
   },
   user6: {
     id: 'u6',
@@ -68,19 +76,22 @@ export const USERS: { [key:string]: User } = {
     totalLikes: 1200000,
     vibeCoinBalance: 20000,
     followingIds: ['u1', 'u3', 'u5'],
+    payoutsSetUp: false,
   },
 };
 
 export const CURRENT_USER: User = { 
   id: 'u_current', 
-  username: 'you', 
+  username: 'jb', 
   avatarUrl: 'https://picsum.photos/id/100/100/100',
   bio: 'Just exploring and creating my own vibes. Tap to edit your bio!',
   followingCount: 78,
   followerCount: 120,
   totalLikes: 450,
-  vibeCoinBalance: 1250,
+  vibeCoinBalance: 1300,
   followingIds: ['u1', 'u3', 'u5'],
+  payoutsSetUp: false,
+  upiId: '',
 };
 
 
@@ -289,11 +300,11 @@ export const XIcon = (props: React.SVGProps<SVGSVGElement>) => (
     </svg>
 );
 
-export const HomeIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>;
-export const SearchIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>;
+export const HomeIcon = (props: React.SVGProps<SVGSVGElement> & { filled?: boolean }) => props.filled ? <svg {...props} viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"></path></svg> : <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>;
+export const SearchIcon = (props: React.SVGProps<SVGSVGElement> & { filled?: boolean }) => props.filled ? <svg {...props} viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"></path></svg> : <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>;
 export const PlusIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
-export const BellIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>;
-export const UserIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>;
+export const BellIcon = (props: React.SVGProps<SVGSVGElement> & { filled?: boolean }) => props.filled ? <svg {...props} viewBox="0 0 24 24" fill="currentColor"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"></path></svg> : <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>;
+export const UserIcon = (props: React.SVGProps<SVGSVGElement> & { filled?: boolean }) => props.filled ? <svg {...props} viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"></path></svg> : <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>;
 export const LockIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>;
 export const UploadCloudIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18.3,14.6C18,12,16.1,10,13.6,10c-0.2,0-0.4,0-0.6,0.1C12.3,8.4,10.6,7,8.5,7C6,7,4,9,4,11.5c0,0.3,0,0.5,0.1,0.8 C4,12.3,4,12.2,4,12.2c-2.2,0.1-4,1.9-4,4.1c0,2.3,1.8,4.1,4.1,4.1h11c2.7,0,4.9-2.2,4.9-4.9C20,15.5,19.3,14.9,18.3,14.6z M12,13v6"></path><polyline points="15 16 12 13 9 16"></polyline></svg>;
 
@@ -377,6 +388,12 @@ export const ChevronRightIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="9 18 15 12 9 6"/>
   </svg>
+);
+
+export const PencilIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+    </svg>
 );
 
 export const TextIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -465,5 +482,63 @@ export const BarChartIcon = (props: React.SVGProps<SVGSVGElement>) => (
         <line x1="12" y1="20" x2="12" y2="10"></line>
         <line x1="18" y1="20" x2="18" y2="4"></line>
         <line x1="6" y1="20" x2="6" y2="16"></line>
+    </svg>
+);
+
+export const MailIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>;
+export const KeyIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg>;
+export const SunIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>;
+export const MoonIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>;
+
+export const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+    </svg>
+);
+
+export const CheckIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="20 6 9 17 4 12"></polyline>
+    </svg>
+);
+
+export const CameraIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+        <circle cx="12" cy="13" r="4"></circle>
+    </svg>
+);
+
+export const WalletBellIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M5 10.3A7.5 7.5 0 0 1 12.5 3a7.5 7.5 0 0 1 7.5 7.3V14H5v-3.7Z" />
+    <path d="M3 18h18" />
+    <path d="M5 14h14v4H5z" />
+    <path d="M12.5 7v4" />
+  </svg>
+);
+
+export const NoPostsIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="3" y1="3" x2="21" y2="21" />
+    <path d="M12 12 5.6 5.6" />
+    <path d="m11 3-3 3" />
+    <path d="m3 11 3-3" />
+    <path d="m21 13-3 3" />
+    <path d="m13 21 3-3" />
+  </svg>
+);
+
+export const UpiIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 3v2c0 1.1.9 2 2 2h1.2" />
+        <path d="M21 3v2c0 1.1-.9 2-2 2h-1.2" />
+        <path d="M3 21v-2c0-1.1.9-2 2-2h1.2" />
+        <path d="M21 21v-2c0-1.1-.9-2-2-2h-1.2" />
+        <path d="M11 3h2" />
+        <path d="M11 21h2" />
+        <path d="M3 11v2" />
+        <path d="M21 11v2" />
     </svg>
 );

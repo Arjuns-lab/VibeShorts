@@ -38,7 +38,7 @@ const Discover: React.FC<DiscoverProps> = ({ posts }) => {
         if (posts.length > 0 && discoverPosts.length === 0) {
             setDiscoverPosts([...posts].sort(() => 0.5 - Math.random()));
         }
-    }, [posts, discoverPosts]);
+    }, [posts, discoverPosts.length]);
     
     const isSearchActive = searchTerm.trim().length > 0;
     

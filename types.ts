@@ -8,6 +8,8 @@ export interface User {
   totalLikes: number;
   vibeCoinBalance: number;
   followingIds: string[];
+  payoutsSetUp: boolean;
+  upiId?: string;
 }
 
 export interface Comment {
@@ -26,6 +28,9 @@ export interface TextOverlay {
   position: { x: number; y: number }; // percentage-based: 0-100
   startTime: number; // in seconds
   endTime: number; // in seconds
+  backgroundStyle?: 'none' | 'rectangle' | 'pill';
+  backgroundColor?: string;
+  backgroundOpacity?: number; // 0 to 1
 }
 
 export interface VideoPost {
@@ -43,11 +48,13 @@ export interface VideoPost {
   filterClass?: string;
   startTime?: number;
   endTime?: number;
+  quality?: 'SD' | 'HD' | '4K';
+  hashtags?: string[];
 }
 
 export interface Transaction {
-  id: string;
-  type: 'earn_watch' | 'earn_bonus' | 'tip_sent';
+  id:string;
+  type: 'earn_watch' | 'earn_bonus' | 'tip_sent' | 'cash_out';
   amount: number; // positive for earnings, negative for spending
   description: string;
   timestamp: string; // ISO string for simplicity
