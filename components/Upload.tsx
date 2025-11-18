@@ -84,6 +84,10 @@ const Upload: React.FC<UploadProps> = ({ onPost, onCancel }) => {
   
   const recordHistory = useCallback((newState: EditorState) => {
       const newHistory = history.slice(0, historyIndex + 1);
+      // Avoid pushing duplicate states
+      if (JSON.stringify(newHistory[newHistory.length - 1]) === JSON.stringify(newState)) {
+          return;
+      }
       newHistory.push(newState);
       setHistory(newHistory);
       setHistoryIndex(newHistory.length - 1);
@@ -137,7 +141,9 @@ const Upload: React.FC<UploadProps> = ({ onPost, onCancel }) => {
         setDuration(videoDuration);
         
         const savedDraft = localStorage.getItem('vibeShortsDraft');
-        if (savedDraft) {
+        const hasLoadedDraft = fileInputRef.current?.dataset.loadDraft === 'true';
+
+        if (hasLoadedDraft && savedDraft) {
             const draftData = JSON.parse(savedDraft);
             setCaption(draftData.caption || '');
             setSelectedFilter(draftData.filterClass || FILTERS[0].class);
@@ -156,6 +162,7 @@ const Upload: React.FC<UploadProps> = ({ onPost, onCancel }) => {
             };
             setHistory([historyState]);
             setHistoryIndex(0);
+            if (fileInputRef.current) fileInputRef.current.dataset.loadDraft = 'false';
         } else {
             const initialEndTime = videoDuration;
             setEndTime(initialEndTime);
@@ -330,7 +337,7 @@ const Upload: React.FC<UploadProps> = ({ onPost, onCancel }) => {
           recordHistory({ textOverlays, startTime, endTime });
       }
       setIsTrimming(null);
-  }, [isTrimming, textOverlays, startTime, endTime, recordHistory]);
+  }, [isTrimming, recordHistory, textOverlays, startTime, endTime]);
 
   useEffect(() => {
     if (isTrimming) {
@@ -418,16 +425,21 @@ const Upload: React.FC<UploadProps> = ({ onPost, onCancel }) => {
   };
   
   const handleSelectOverlay = (id: string | null) => {
-    if (selectedOverlayId && editingOverlayInitialState) {
+    // If we're de-selecting, revert changes of the currently selected overlay
+    if (selectedOverlayId && editingOverlayInitialState && id !== selectedOverlayId) {
         setTextOverlays(prev => prev.map(o => o.id === selectedOverlayId ? editingOverlayInitialState : o));
     }
+
     if (id) {
         const overlay = textOverlays.find(o => o.id === id);
         if (overlay) {
             setEditingOverlayInitialState(overlay);
             setSelectedOverlayId(id);
         }
-    } else {
+    } else { // This is a full de-select/cancel
+        if (selectedOverlayId && editingOverlayInitialState) {
+            setTextOverlays(prev => prev.map(o => o.id === selectedOverlayId ? editingOverlayInitialState : o));
+        }
         setSelectedOverlayId(null);
         setEditingOverlayInitialState(null);
     }
@@ -501,6 +513,7 @@ const Upload: React.FC<UploadProps> = ({ onPost, onCancel }) => {
 
   // Draft functions
   const saveDraft = () => {
+    if (window.confirm("Do you want to save your current progress as a draft? This will overwrite any existing draft.")) {
       if (!videoFile) return;
       const draft = {
           caption,
@@ -514,6 +527,7 @@ const Upload: React.FC<UploadProps> = ({ onPost, onCancel }) => {
       // For this simulation, we'll just save the metadata.
       setShowDraftToast(true);
       setTimeout(() => setShowDraftToast(false), 2000);
+    }
   };
 
   const clearDraft = () => {
@@ -591,6 +605,21 @@ const Upload: React.FC<UploadProps> = ({ onPost, onCancel }) => {
 
   const renderContent = () => {
     if (step === 'select') {
+      const handleLoadDraftClick = () => {
+        if (fileInputRef.current) {
+          fileInputRef.current.dataset.loadDraft = 'true';
+          fileInputRef.current.click();
+        }
+      };
+      
+      const handleNewProjectClick = () => {
+        clearDraft();
+        if (fileInputRef.current) {
+          fileInputRef.current.dataset.loadDraft = 'false';
+          fileInputRef.current.click();
+        }
+      };
+      
       return (
         <div className="w-full space-y-4">
             {draftExists && (
@@ -598,15 +627,15 @@ const Upload: React.FC<UploadProps> = ({ onPost, onCancel }) => {
                     <p className="font-bold text-lg">You have a saved draft!</p>
                     <p className="text-sm opacity-80 mb-3">Do you want to continue editing or start fresh?</p>
                     <div className="flex gap-2 justify-center">
-                        <button onClick={() => { fileInputRef.current?.click(); }} className="px-4 py-2 bg-[var(--accent-color)] text-white font-bold rounded-lg">Load Draft</button>
-                        <button onClick={() => { clearDraft(); fileInputRef.current?.click(); }} className="px-4 py-2 bg-[var(--border-color)] font-bold rounded-lg">New Project</button>
+                        <button onClick={handleLoadDraftClick} className="px-4 py-2 bg-[var(--accent-color)] text-white font-bold rounded-lg">Load Draft</button>
+                        <button onClick={handleNewProjectClick} className="px-4 py-2 bg-[var(--border-color)] font-bold rounded-lg">New Project</button>
                     </div>
                 </div>
             )}
-             <div className={`grid grid-cols-2 gap-4 w-full ${draftExists ? 'hidden' : ''}`}>
+             <div className="grid grid-cols-2 gap-4 w-full">
                 <div 
                     className="h-48 bg-[var(--frame-bg-color)] rounded-3xl flex flex-col items-center justify-center cursor-pointer relative overflow-hidden border-2 border-dashed border-[var(--border-color)] hover:border-[var(--accent-color)] transition-colors hover:bg-[var(--accent-color)]/5"
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={handleNewProjectClick}
                     role="button" tabIndex={0} aria-label="Select video to upload"
                 >
                     <div className="text-center text-[var(--text-color)] opacity-80 flex flex-col items-center">
@@ -688,9 +717,13 @@ const Upload: React.FC<UploadProps> = ({ onPost, onCancel }) => {
 
               const backgroundStyle: React.CSSProperties = {};
               if (overlay.backgroundStyle && overlay.backgroundStyle !== 'none') {
-                  backgroundStyle.backgroundColor = overlay.backgroundColor || '#000000';
-                  backgroundStyle.opacity = overlay.backgroundOpacity ?? 0.5;
-                  if (overlay.backgroundStyle === 'rectangle') backgroundStyle.borderRadius = '0.375rem'; // 6px
+                  const rgbaColor = overlay.backgroundColor?.startsWith('#')
+                    ? `${overlay.backgroundColor}${Math.round((overlay.backgroundOpacity ?? 0.5) * 255).toString(16).padStart(2, '0')}`
+                    : `rgba(0,0,0,${overlay.backgroundOpacity ?? 0.5})`;
+
+                  backgroundStyle.backgroundColor = rgbaColor;
+                  
+                  if (overlay.backgroundStyle === 'rectangle') backgroundStyle.borderRadius = '0.375rem';
                   if (overlay.backgroundStyle === 'pill') backgroundStyle.borderRadius = '9999px';
               }
 
@@ -704,7 +737,11 @@ const Upload: React.FC<UploadProps> = ({ onPost, onCancel }) => {
                       onPointerDown={(e) => handlePointerDown(e, overlay.id)}
                   >
                       {overlay.backgroundStyle && overlay.backgroundStyle !== 'none' && (
-                          <div className="absolute inset-0 -z-10" style={backgroundStyle}></div>
+                          <div className="absolute inset-0 -z-10" style={{
+                              backgroundColor: overlay.backgroundColor,
+                              opacity: overlay.backgroundOpacity,
+                              borderRadius: backgroundStyle.borderRadius
+                          }}></div>
                       )}
                       <span style={{
                           color: overlay.color,
