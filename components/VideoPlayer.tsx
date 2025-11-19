@@ -94,7 +94,7 @@ const useSwipeActions = ({
 
 const VideoPlayer: React.FC<VideoPlayerProps> = ({ post, onView, onFullScreenToggle, onVideoEnd, isAutoScrollEnabled, onEarnCoins, onTipCreator, currentUser, isMuted, setIsMuted, volume, onSwipeToProfile, onSwipeToShare, onLike, onOpenComments }) => {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [showLikeAnimation, setShowLikeAnimation] = useState(false);
+  const [likeAnimationPos, setLikeAnimationPos] = useState<{x: number, y: number} | null>(null);
   const [showCoinAnimation, setShowCoinAnimation] = useState(false);
   const [showTipAnimation, setShowTipAnimation] = useState(false);
   const [isTippingModalOpen, setIsTippingModalOpen] = useState(false);
@@ -169,24 +169,34 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ post, onView, onFullScreenTog
 
   const handleLikeButtonClick = () => {
     if (!post.isLiked) {
-      setShowLikeAnimation(true);
-      setTimeout(() => setShowLikeAnimation(false), 800);
+        // Center position fallback if clicked via button
+        setLikeAnimationPos({x: 50, y: 50});
+        setTimeout(() => setLikeAnimationPos(null), 800);
     }
     onLike(post.id);
   };
 
-  const handleContainerClick = () => {
+  const handleContainerClick = (e: React.MouseEvent) => {
       if (isGiftTrayOpen) {
         setIsGiftTrayOpen(false);
         return;
       }
       if (Math.abs(swipeState.deltaX) > 20) return;
       if (tapTimeout.current !== null) {
+          // Double tap detected
           clearTimeout(tapTimeout.current);
           tapTimeout.current = null;
+          
           if (!post.isLiked) onLike(post.id);
-          setShowLikeAnimation(true);
-          setTimeout(() => setShowLikeAnimation(false), 800);
+          
+          // Calculate click position relative to container
+          if (containerRef.current) {
+              const rect = containerRef.current.getBoundingClientRect();
+              const x = ((e.clientX - rect.left) / rect.width) * 100;
+              const y = ((e.clientY - rect.top) / rect.height) * 100;
+              setLikeAnimationPos({x, y});
+              setTimeout(() => setLikeAnimationPos(null), 800);
+          }
       } else {
           tapTimeout.current = window.setTimeout(() => {
               handlePlayPause();
@@ -422,8 +432,22 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ post, onView, onFullScreenTog
             
             {showCoinAnimation && (<div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-none animate-coin-rise flex items-center gap-2 bg-yellow-400/90 text-black font-bold py-2 px-3 rounded-full shadow-lg backdrop-blur-sm"><CoinIcon className="w-6 h-6" /><span>+10</span></div>)}
             {showTipAnimation && (<div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-none animate-fade-in-out flex items-center gap-2 bg-green-500/90 text-white font-bold py-2 px-4 rounded-full shadow-lg backdrop-blur-sm"><span>Gift Sent!</span></div>)}
-            {showLikeAnimation && (<div className="absolute inset-0 flex justify-center items-center z-20 pointer-events-none"><HeartIcon filled className="w-32 h-32 text-[var(--accent-color)] drop-shadow-lg animate-heart-pop" /></div>)}
-            {!isPlaying && (<div className="absolute text-white/70 pointer-events-none drop-shadow-lg"><svg className="w-20 h-20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,2C6.5,2,2,6.5,2,12s4.5,10,10,10s10-4.5,10-10S17.5,2,12,2z M10,16.5v-9l6,4.5L10,16.5z"/></svg></div>)}
+            
+            {/* Positional Like Animation */}
+            {likeAnimationPos && (
+                <div 
+                    className="absolute z-20 pointer-events-none" 
+                    style={{ 
+                        left: `${likeAnimationPos.x}%`, 
+                        top: `${likeAnimationPos.y}%`,
+                        transform: 'translate(-50%, -50%)'
+                    }}
+                >
+                    <HeartIcon filled className="w-32 h-32 text-[var(--accent-color)] drop-shadow-lg animate-heart-pop" />
+                </div>
+            )}
+
+            {!isPlaying && (<div className="absolute text-white/70 pointer-events-none drop-shadow-lg top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"><svg className="w-20 h-20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,2C6.5,2,2,6.5,2,12s4.5,10,10,10s10-4.5,10-10S17.5,2,12,2z M10,16.5v-9l6,4.5L10,16.5z"/></svg></div>)}
 
             <div className="absolute bottom-0 left-0 w-full p-4 text-white z-10 font-display" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
                 <div className="flex justify-between items-end">

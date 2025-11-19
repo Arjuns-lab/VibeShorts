@@ -1,10 +1,11 @@
 
 import React, { useState, useRef, ChangeEvent, useEffect, useCallback, useMemo } from 'react';
-import { UploadCloudIcon, TextIcon, TrashIcon, UndoIcon, RedoIcon, CameraIcon } from '../constants';
+import { UploadCloudIcon, TextIcon, TrashIcon, UndoIcon, RedoIcon, CameraIcon, MusicNoteIcon } from '../constants';
 import { TextOverlay } from '../types';
+import { MOCK_SOUNDS } from '../constants';
 
 interface UploadProps {
-  onPost: (data: { videoFile: File; caption: string; hashtags: string[]; textOverlays: TextOverlay[], filterClass: string; startTime: number; endTime: number; videoQuality: 'SD' | 'HD' | '4K'; }) => void;
+  onPost: (data: { videoFile: File; caption: string; hashtags: string[]; textOverlays: TextOverlay[], filterClass: string; startTime: number; endTime: number; videoQuality: 'SD' | 'HD' | '4K'; songTitle?: string }) => void;
   onCancel: () => void;
 }
 
@@ -43,10 +44,13 @@ const Upload: React.FC<UploadProps> = ({ onPost, onCancel }) => {
   const [currentTime, setCurrentTime] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadStatusText, setUploadStatusText] = useState('Preparing your vibe...');
+  const [uploadStatusText, setUploadStatusText] = useState('Starting upload...');
   const [videoQuality, setVideoQuality] = useState<'SD' | 'HD' | '4K'>('HD');
   const [draftExists, setDraftExists] = useState(false);
   const [showDraftToast, setShowDraftToast] = useState(false);
+  const [loadDraft, setLoadDraft] = useState(false);
+  const [selectedSound, setSelectedSound] = useState<{id: string, title: string, artist: string} | null>(null);
+  const [isSoundModalOpen, setIsSoundModalOpen] = useState(false);
 
   // Recording State
   const [stream, setStream] = useState<MediaStream | null>(null);
@@ -86,7 +90,7 @@ const Upload: React.FC<UploadProps> = ({ onPost, onCancel }) => {
   const recordHistory = useCallback((newState: EditorState) => {
       const newHistory = history.slice(0, historyIndex + 1);
       // Avoid pushing duplicate states
-      if (JSON.stringify(newHistory[newHistory.length - 1]) === JSON.stringify(newState)) {
+      if (newHistory.length > 0 && JSON.stringify(newHistory[newHistory.length - 1]) === JSON.stringify(newState)) {
           return;
       }
       newHistory.push(newState);
@@ -142,9 +146,8 @@ const Upload: React.FC<UploadProps> = ({ onPost, onCancel }) => {
         setDuration(videoDuration);
         
         const savedDraft = localStorage.getItem('vibeShortsDraft');
-        const hasLoadedDraft = fileInputRef.current?.dataset.loadDraft === 'true';
 
-        if (hasLoadedDraft && savedDraft) {
+        if (loadDraft && savedDraft) {
             const draftData = JSON.parse(savedDraft);
             setCaption(draftData.caption || '');
             setSelectedFilter(draftData.filterClass || FILTERS[0].class);
@@ -163,7 +166,7 @@ const Upload: React.FC<UploadProps> = ({ onPost, onCancel }) => {
             };
             setHistory([historyState]);
             setHistoryIndex(0);
-            if (fileInputRef.current) fileInputRef.current.dataset.loadDraft = 'false';
+            setLoadDraft(false); // Reset
         } else {
             const initialEndTime = videoDuration;
             setEndTime(initialEndTime);
@@ -193,35 +196,50 @@ const Upload: React.FC<UploadProps> = ({ onPost, onCancel }) => {
 
     setIsUploading(true);
     setUploadProgress(0);
-    setUploadStatusText('Preparing your vibe...');
+    setUploadStatusText('Starting upload...');
     
     const hashtags = caption.match(/#\w+/g) || [];
 
     uploadIntervalRef.current = window.setInterval(() => {
         setUploadProgress(prev => {
-            const increment = prev < 70 ? (Math.random() * 5 + 5) : (Math.random() * 2 + 1);
+            // Simulate variable upload speed
+            const isFastPhase = prev < 30;
+            const isSlowPhase = prev > 80;
+            
+            let increment;
+            if (isFastPhase) {
+                increment = Math.random() * 8 + 3;
+            } else if (isSlowPhase) {
+                increment = Math.random() * 1.5 + 0.2;
+            } else {
+                increment = Math.random() * 4 + 1;
+            }
+
             let newProgress = prev + increment;
             
             if (newProgress >= 100) {
                 newProgress = 100;
                 if (uploadIntervalRef.current) clearInterval(uploadIntervalRef.current);
-                setUploadStatusText('Done! 🎉');
+                setUploadStatusText('Upload Complete! 🎉');
                 
                 setTimeout(() => {
-                    onPost({ videoFile, caption, hashtags, textOverlays, filterClass: selectedFilter, startTime, endTime, videoQuality });
+                    const songTitle = selectedSound ? `${selectedSound.title} - ${selectedSound.artist}` : undefined;
+                    onPost({ videoFile, caption, hashtags, textOverlays, filterClass: selectedFilter, startTime, endTime, videoQuality, songTitle });
                     clearDraft();
-                }, 800);
+                }, 1000);
 
-            } else if (newProgress > 85) {
-                setUploadStatusText('Almost there...');
-            } else if (newProgress > 50) {
-                setUploadStatusText('Uploading securely...');
+            } else if (newProgress > 90) {
+                setUploadStatusText('Processing...');
+            } else if (newProgress > 60) {
+                setUploadStatusText('Uploading video...');
+            } else if (newProgress > 30) {
+                setUploadStatusText('Encoding...');
             }
             
             return Math.min(newProgress, 100);
         });
-    }, 150);
-};
+    }, 200);
+  };
   
   const handleBackToSelect = () => {
     setVideoFile(null);
@@ -235,6 +253,7 @@ const Upload: React.FC<UploadProps> = ({ onPost, onCancel }) => {
     setSelectedOverlayId(null);
     setHistory([]);
     setHistoryIndex(-1);
+    setSelectedSound(null);
     if(fileInputRef.current) fileInputRef.current.value = "";
     setStep('select');
   };
@@ -311,6 +330,13 @@ const Upload: React.FC<UploadProps> = ({ onPost, onCancel }) => {
   }, [recordingStatus, recordedChunks, mediaRecorder]);
   
   // Trimming logic
+  const handleTrimStart = (type: 'start' | 'end') => {
+    setIsTrimming(type);
+    if (videoRef.current) {
+        videoRef.current.pause();
+    }
+  };
+
   const handleTrimChange = useCallback((clientX: number) => {
     if (!trimBarRef.current || !duration || !isTrimming) return;
 
@@ -335,7 +361,20 @@ const Upload: React.FC<UploadProps> = ({ onPost, onCancel }) => {
   const handleTouchMove = useCallback((e: TouchEvent) => { handleTrimChange(e.touches[0].clientX); }, [handleTrimChange]);
   const handleMouseUp = useCallback(() => {
       if (isTrimming) {
+          // Important: Pass the current state values explicitly to recordHistory 
+          // although recordHistory typically uses the closure's state, here we ensure flow is clear.
+          // However, recordHistory implementation uses its own closed-over state.
+          // To correctly record the NEW state we just set (startTime/endTime), we might need to wait for render
+          // or rely on the fact that setIsTrimming(null) triggers re-render.
+          // But `startTime` and `endTime` state updates from handleTrimChange might be batched.
+          
+          // Best approach for this simple implementation: Just record the current values.
+          // Since we updated startTime/endTime during drag, they are current.
           recordHistory({ textOverlays, startTime, endTime });
+          
+          if (videoRef.current) {
+              videoRef.current.play();
+          }
       }
       setIsTrimming(null);
   }, [isTrimming, recordHistory, textOverlays, startTime, endTime]);
@@ -524,8 +563,6 @@ const Upload: React.FC<UploadProps> = ({ onPost, onCancel }) => {
           textOverlays,
       };
       localStorage.setItem('vibeShortsDraft', JSON.stringify(draft));
-      // In a real app, you'd save the video file using IndexedDB or similar.
-      // For this simulation, we'll just save the metadata.
       setShowDraftToast(true);
       setTimeout(() => setShowDraftToast(false), 2000);
     }
@@ -608,7 +645,7 @@ const Upload: React.FC<UploadProps> = ({ onPost, onCancel }) => {
     if (step === 'select') {
       const handleLoadDraftClick = () => {
         if (fileInputRef.current) {
-          fileInputRef.current.dataset.loadDraft = 'true';
+          setLoadDraft(true);
           fileInputRef.current.click();
         }
       };
@@ -616,7 +653,7 @@ const Upload: React.FC<UploadProps> = ({ onPost, onCancel }) => {
       const handleNewProjectClick = () => {
         clearDraft();
         if (fileInputRef.current) {
-          fileInputRef.current.dataset.loadDraft = 'false';
+          setLoadDraft(false);
           fileInputRef.current.click();
         }
       };
@@ -716,17 +753,9 @@ const Upload: React.FC<UploadProps> = ({ onPost, onCancel }) => {
               const isVisible = currentTime >= overlay.startTime && currentTime <= overlay.endTime;
               if (!isVisible) return null;
 
-              const backgroundStyle: React.CSSProperties = {};
-              if (overlay.backgroundStyle && overlay.backgroundStyle !== 'none') {
-                  const rgbaColor = overlay.backgroundColor?.startsWith('#')
-                    ? `${overlay.backgroundColor}${Math.round((overlay.backgroundOpacity ?? 0.5) * 255).toString(16).padStart(2, '0')}`
-                    : `rgba(0,0,0,${overlay.backgroundOpacity ?? 0.5})`;
-
-                  backgroundStyle.backgroundColor = rgbaColor;
-                  
-                  if (overlay.backgroundStyle === 'rectangle') backgroundStyle.borderRadius = '0.375rem';
-                  if (overlay.backgroundStyle === 'pill') backgroundStyle.borderRadius = '9999px';
-              }
+              let borderRadius = '0';
+              if (overlay.backgroundStyle === 'rectangle') borderRadius = '0.375rem';
+              if (overlay.backgroundStyle === 'pill') borderRadius = '9999px';
 
               return (
                   <div key={overlay.id}
@@ -741,7 +770,7 @@ const Upload: React.FC<UploadProps> = ({ onPost, onCancel }) => {
                           <div className="absolute inset-0 -z-10" style={{
                               backgroundColor: overlay.backgroundColor,
                               opacity: overlay.backgroundOpacity,
-                              borderRadius: backgroundStyle.borderRadius
+                              borderRadius: borderRadius
                           }}></div>
                       )}
                       <span style={{
@@ -758,9 +787,24 @@ const Upload: React.FC<UploadProps> = ({ onPost, onCancel }) => {
           
           {step === 'edit' && (
             <div className="w-full space-y-4 font-display">
-               <button onClick={handleAddText} className="w-full flex items-center justify-center gap-2 py-2.5 text-lg font-bold border-2 border-[var(--border-color)] text-[var(--text-color)] rounded-xl transition-colors hover:bg-[var(--text-color)]/10">
-                    <TextIcon className="w-6 h-6" /> Add Text
-                </button>
+               <div className="grid grid-cols-2 gap-2">
+                    <button onClick={handleAddText} className="w-full flex items-center justify-center gap-2 py-2.5 text-lg font-bold border-2 border-[var(--border-color)] text-[var(--text-color)] rounded-xl transition-colors hover:bg-[var(--text-color)]/10">
+                        <TextIcon className="w-6 h-6" /> Add Text
+                    </button>
+                    <button onClick={() => setIsSoundModalOpen(true)} className="w-full flex items-center justify-center gap-2 py-2.5 text-lg font-bold border-2 border-[var(--border-color)] text-[var(--text-color)] rounded-xl transition-colors hover:bg-[var(--text-color)]/10">
+                        <MusicNoteIcon className="w-6 h-6" /> {selectedSound ? 'Change' : 'Sound'}
+                    </button>
+                </div>
+                {selectedSound && (
+                    <div className="flex items-center justify-between bg-[var(--accent-color)]/10 p-2 rounded-lg px-3">
+                        <div className="flex items-center gap-2">
+                            <MusicNoteIcon className="w-4 h-4 text-[var(--accent-color)]" />
+                            <p className="text-sm font-bold truncate max-w-[150px]">{selectedSound.title}</p>
+                        </div>
+                        <button onClick={() => setSelectedSound(null)} className="text-xs font-bold text-red-500 hover:underline">Remove</button>
+                    </div>
+                )}
+
               <div>
                   <label className="font-bold text-lg">Filters</label>
                   <div className="filter-list flex items-center gap-2 overflow-x-auto pt-2 pb-1">
@@ -781,12 +825,22 @@ const Upload: React.FC<UploadProps> = ({ onPost, onCancel }) => {
                         {(endTime - startTime).toFixed(1)}s
                     </span>
                  </div>
-                 <div className="trim-bar" ref={trimBarRef}>
-                    <div className="trim-track relative">
+                 <div className="trim-bar w-full py-2 cursor-pointer" ref={trimBarRef}>
+                    <div className="trim-track w-full h-2 bg-[var(--border-color)] rounded-full relative">
                         <div className="absolute h-full bg-[var(--accent-color)]/50 rounded-lg" style={{ left: `${startPercent}%`, width: `${endPercent - startPercent}%` }} />
                         <div className="absolute top-0 h-full w-1 bg-white/80 rounded-full" style={{ left: `${duration > 0 ? (currentTime / duration) * 100 : 0}%`, transform: 'translateX(-50%)' }} />
-                        <div className="trim-handle" style={{ left: `${startPercent}%`, transform: 'translate(-50%, -50%)' }} onMouseDown={() => setIsTrimming('start')} onTouchStart={() => setIsTrimming('start')} />
-                        <div className="trim-handle" style={{ left: `${endPercent}%`, transform: 'translate(-50%, -50%)' }} onMouseDown={() => setIsTrimming('end')} onTouchStart={() => setIsTrimming('end')} />
+                        <div 
+                            className="trim-handle w-6 h-6 bg-white border-4 border-[var(--accent-color)] rounded-full absolute top-1/2 cursor-ew-resize shadow-md z-10" 
+                            style={{ left: `${startPercent}%`, transform: 'translate(-50%, -50%)' }} 
+                            onMouseDown={() => handleTrimStart('start')}
+                            onTouchStart={() => handleTrimStart('start')}
+                        />
+                        <div 
+                            className="trim-handle w-6 h-6 bg-white border-4 border-[var(--accent-color)] rounded-full absolute top-1/2 cursor-ew-resize shadow-md z-10" 
+                            style={{ left: `${endPercent}%`, transform: 'translate(-50%, -50%)' }} 
+                            onMouseDown={() => handleTrimStart('end')}
+                            onTouchStart={() => handleTrimStart('end')}
+                        />
                     </div>
                  </div>
               </div>
@@ -888,6 +942,29 @@ const Upload: React.FC<UploadProps> = ({ onPost, onCancel }) => {
         {renderContent()}
       </main>
       {step === 'edit' && selectedOverlay && <TextEditorPanel />}
+      {isSoundModalOpen && (
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-center items-end sm:items-center" onClick={() => setIsSoundModalOpen(false)}>
+            <div className="bg-[var(--frame-bg-color)] text-[var(--text-color)] w-full max-w-sm rounded-t-3xl sm:rounded-3xl p-6 flex flex-col gap-4 font-display max-h-[70vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                <h2 className="text-2xl font-black text-center">Select Sound</h2>
+                <div className="flex flex-col gap-2">
+                    {MOCK_SOUNDS.map(sound => (
+                        <button 
+                            key={sound.id}
+                            onClick={() => { setSelectedSound(sound); setIsSoundModalOpen(false); }}
+                            className={`flex items-center justify-between p-3 rounded-xl border-2 ${selectedSound?.id === sound.id ? 'border-[var(--accent-color)] bg-[var(--accent-color)]/10' : 'border-[var(--border-color)] hover:bg-[var(--bg-color)]'}`}
+                        >
+                            <div className="text-left">
+                                <p className="font-bold">{sound.title}</p>
+                                <p className="text-sm opacity-70">{sound.artist}</p>
+                            </div>
+                            {selectedSound?.id === sound.id && <MusicNoteIcon className="w-5 h-5 text-[var(--accent-color)]" />}
+                        </button>
+                    ))}
+                </div>
+                <button onClick={() => setIsSoundModalOpen(false)} className="w-full py-3 font-bold border-2 border-[var(--border-color)] rounded-xl hover:bg-[var(--text-color)]/10">Cancel</button>
+            </div>
+        </div>
+      )}
       {isUploading && (
         <div className="absolute inset-0 bg-black/70 backdrop-blur-sm z-40 flex flex-col justify-center items-center p-8 text-center">
             {previewUrl && (

@@ -95,6 +95,14 @@ export const CURRENT_USER: User = {
   upiId: '',
 };
 
+export const MOCK_SOUNDS = [
+    { id: 's1', title: 'Lo-Fi Beats', artist: 'Chillhop Records' },
+    { id: 's2', title: 'Good Times', artist: 'All Time Low' },
+    { id: 's3', title: 'Viral Dance Challenge', artist: 'TrendSetter' },
+    { id: 's4', title: 'Epic Cinematic Score', artist: 'Hollywood OST' },
+    { id: 's5', title: 'Funny Laugh Track', artist: 'Comedy Central' },
+    { id: 's6', title: 'Cyberpunk City', artist: 'SynthWave Pro' },
+];
 
 export const MOCK_VIDEO_POSTS: VideoPost[] = [
   {
@@ -548,5 +556,13 @@ export const UpiIcon = (props: React.SVGProps<SVGSVGElement>) => (
         <path d="M11 21h2" />
         <path d="M3 11v2" />
         <path d="M21 11v2" />
+    </svg>
+);
+
+export const MusicNoteIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M9 18V5l12-2v13"></path>
+        <circle cx="6" cy="18" r="3"></circle>
+        <circle cx="18" cy="16" r="3"></circle>
     </svg>
 );

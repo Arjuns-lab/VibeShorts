@@ -201,7 +201,7 @@ const App: React.FC = () => {
     setIsSettingsOpen(false);
   };
 
-  const handlePostVideo = (data: { videoFile: File; caption: string; hashtags: string[]; textOverlays: TextOverlay[]; filterClass: string; startTime: number; endTime: number; videoQuality: 'SD' | 'HD' | '4K' }) => {
+  const handlePostVideo = (data: { videoFile: File; caption: string; hashtags: string[]; textOverlays: TextOverlay[]; filterClass: string; startTime: number; endTime: number; videoQuality: 'SD' | 'HD' | '4K'; songTitle?: string }) => {
     if (!currentUser) return;
     const newVideoUrl = URL.createObjectURL(data.videoFile);
     const newPost: VideoPost = {
@@ -211,7 +211,7 @@ const App: React.FC = () => {
       posterUrl: currentUser.avatarUrl,
       caption: data.caption,
       hashtags: data.hashtags,
-      songTitle: 'Original Sound • ' + currentUser.username,
+      songTitle: data.songTitle || 'Original Sound • ' + currentUser.username,
       likes: 0,
       comments: 0,
       shares: 0,
