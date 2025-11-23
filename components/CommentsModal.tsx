@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { VideoPost, Comment, User } from '../types';
-import { XIcon, ShareIcon } from '../constants';
+import { XIcon, ShareIcon, playSound } from '../constants';
 
 interface CommentsModalProps {
     post: VideoPost;
@@ -74,6 +74,7 @@ const CommentsModal: React.FC<CommentsModalProps> = ({ post, comments, currentUs
         e.preventDefault();
         const trimmedComment = newComment.trim();
         if (trimmedComment) {
+            playSound('success');
             onAddComment(post, trimmedComment);
             setNewComment('');
         }

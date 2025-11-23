@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { VideoPost, TextOverlay, User } from '../types';
-import { HeartIcon, CommentIcon, ShareIcon, MusicDiscIcon, DownloadIcon, FullScreenIcon, FullScreenExitIcon, VolumeOnIcon, VolumeOffIcon, PlaybackSpeedIcon, AutoscrollIcon, PlayIcon, PauseIcon, CoinIcon, GiftIcon, ShareSolidIcon, GIFTS } from '../constants';
+import { HeartIcon, CommentIcon, ShareIcon, MusicDiscIcon, DownloadIcon, FullScreenIcon, FullScreenExitIcon, VolumeOnIcon, VolumeOffIcon, PlaybackSpeedIcon, AutoscrollIcon, PlayIcon, PauseIcon, CoinIcon, GiftIcon, ShareSolidIcon, GIFTS, MagicWandIcon, playSound } from '../constants';
 
 interface VideoPlayerProps {
   post: VideoPost;
@@ -108,6 +108,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ post, onView, onFullScreenTog
   const [playbackRate, setPlaybackRate] = useState(1);
   const [isScrubbing, setIsScrubbing] = useState(false);
   const [scrubPreview, setScrubPreview] = useState<{ time: number; position: number } | null>(null);
+  const [visualEffect, setVisualEffect] = useState('');
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -116,6 +117,12 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ post, onView, onFullScreenTog
   const hasBeenViewed = useRef(false);
   const wasPlayingBeforeScrub = useRef(false);
   const hasEarnedCoinsForView = useRef(false);
+  const isMounted = useRef(true);
+
+  useEffect(() => {
+      isMounted.current = true;
+      return () => { isMounted.current = false; };
+  }, []);
 
   const { swipeState, touchHandlers } = useSwipeActions({
     onSwipeLeft: () => onSwipeToProfile(post.user),
@@ -148,12 +155,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ post, onView, onFullScreenTog
       }
       try {
         await videoRef.current.play();
-        setIsPlaying(true);
+        if (isMounted.current) setIsPlaying(true);
       } catch (error: any) {
-        if (error.name !== 'AbortError') {
+        // Ignore AbortError (interrupted by pause) and NotAllowedError (autoplay policy)
+        if (error.name !== 'AbortError' && error.name !== 'NotAllowedError') {
           console.error("Video play failed:", error);
-          setIsPlaying(false);
         }
+        if (isMounted.current) setIsPlaying(false);
       }
     }
   }, [clipStartTime, clipEndTime]);
@@ -161,19 +169,42 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ post, onView, onFullScreenTog
   const pauseVideo = useCallback(() => {
     if (videoRef.current) {
       videoRef.current.pause();
-      setIsPlaying(false);
+      if (isMounted.current) setIsPlaying(false);
     }
   }, []);
 
   const handlePlayPause = () => isPlaying ? pauseVideo() : playVideo();
 
   const handleLikeButtonClick = () => {
+    playSound('pop');
     if (!post.isLiked) {
         // Center position fallback if clicked via button
         setLikeAnimationPos({x: 50, y: 50});
         setTimeout(() => setLikeAnimationPos(null), 800);
     }
     onLike(post.id);
+  };
+
+  const handleRandomEffect = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      const effects = [
+          'grayscale(100%)',
+          'sepia(100%)',
+          'invert(100%)',
+          'hue-rotate(90deg)',
+          'contrast(200%)',
+          'brightness(150%)',
+          'saturate(300%)',
+          'blur(2px)',
+          '' // Reset
+      ];
+      // Pick random effect different from current if possible
+      let randomEffect = effects[Math.floor(Math.random() * effects.length)];
+      if (randomEffect === visualEffect && effects.length > 1) {
+           const otherEffects = effects.filter(e => e !== visualEffect);
+           randomEffect = otherEffects[Math.floor(Math.random() * otherEffects.length)];
+      }
+      setVisualEffect(randomEffect);
   };
 
   const handleContainerClick = (e: React.MouseEvent) => {
@@ -187,6 +218,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ post, onView, onFullScreenTog
           clearTimeout(tapTimeout.current);
           tapTimeout.current = null;
           
+          playSound('pop');
           if (!post.isLiked) onLike(post.id);
           
           // Calculate click position relative to container
@@ -264,6 +296,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ post, onView, onFullScreenTog
   const handleTip = (amount: number) => {
     const success = onTipCreator(post.user, amount);
     if(success) {
+      playSound('success');
       setIsTippingModalOpen(false);
       setShowTipAnimation(true);
       setTimeout(() => setShowTipAnimation(false), 3000);
@@ -278,6 +311,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ post, onView, onFullScreenTog
   const handleSendGift = (gift: { emoji: string; cost: number }) => {
     const success = onTipCreator(post.user, gift.cost);
     if(success) {
+      playSound('success');
       setAnimatingGift({ key: Date.now(), emoji: gift.emoji });
       setTimeout(() => setAnimatingGift(null), 1200);
       setShowTipAnimation(true);
@@ -395,6 +429,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ post, onView, onFullScreenTog
     return () => {
       if (currentContainer) observer.unobserve(currentContainer);
       if (tapTimeout.current) clearTimeout(tapTimeout.current);
+      pauseVideo(); // Ensure paused on unmount
     };
   }, [playVideo, pauseVideo, post, onView]);
 
@@ -424,7 +459,17 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ post, onView, onFullScreenTog
                 transition: swipeState.isSwiping ? 'none' : 'transform 0.3s ease-out'
             }}
         >
-            <video ref={videoRef} src={post.videoUrl} poster={post.posterUrl} playsInline className={`w-full h-full object-contain ${post.filterClass || ''}`} onTimeUpdate={handleTimeUpdate} onLoadedMetadata={handleLoadedMetadata} onProgress={handleProgress} />
+            <video 
+                ref={videoRef} 
+                src={post.videoUrl} 
+                poster={post.posterUrl} 
+                playsInline 
+                className={`w-full h-full object-contain ${post.filterClass || ''}`} 
+                style={{ filter: visualEffect }}
+                onTimeUpdate={handleTimeUpdate} 
+                onLoadedMetadata={handleLoadedMetadata} 
+                onProgress={handleProgress} 
+            />
 
             <div className="absolute inset-0 w-full h-full pointer-events-none z-[5]">
                 {visibleOverlays.map(o => <div key={o.id} className="absolute p-2" style={{ left: `${o.position.x}%`, top: `${o.position.y}%`, transform: 'translate(-50%, -50%)', color: o.color, fontSize: `${o.fontSize}px`, fontFamily: o.fontFamily, fontWeight: '900', textShadow: '2px 2px 4px rgba(0,0,0,0.7)', whiteSpace: 'pre-wrap', textAlign: 'center' }}>{o.text}</div>)}
@@ -493,6 +538,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ post, onView, onFullScreenTog
                         <button className="flex flex-col items-center" onClick={e => { e.stopPropagation(); onSwipeToShare(post);}}><ShareIcon className="w-9 h-9 text-white" strokeWidth="2"/><span className="text-sm font-bold">{formatCount(post.shares)}</span></button>
                         <button className="flex flex-col items-center" onClick={handleGiftButtonClick}><GiftIcon className="w-9 h-9 text-white" strokeWidth="2"/><span className="text-sm font-bold">Tip</span></button>
                         <button className="flex flex-col items-center" onClick={e => {e.stopPropagation(); handleDownload();}}><DownloadIcon className="w-9 h-9 text-white" strokeWidth="2"/><span className="text-sm font-bold">Download</span></button>
+                        <button className="flex flex-col items-center" onClick={handleRandomEffect}><MagicWandIcon className="w-9 h-9 text-white" strokeWidth="2"/><span className="text-sm font-bold">Effect</span></button>
                         <div className="w-12 h-12 relative mt-2"><MusicDiscIcon className="w-full h-full text-white/80 animate-spin" style={{ animationDuration: '6s' }}/><img src={post.user.avatarUrl} alt="song cover" className="w-6 h-6 rounded-full object-cover absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"/></div>
                     </div>
                 </div>

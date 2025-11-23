@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { HomeIcon, SearchIcon, PlusIcon, BellIcon, UserIcon } from '../constants';
+import { HomeIcon, SearchIcon, PlusIcon, BellIcon, UserIcon, playSound } from '../constants';
 import { Page } from '../App';
 
 interface BottomNavProps {
@@ -19,7 +19,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ currentPage, onNavigate, onOpenCr
     const isActive = currentPage === page;
     return (
       <button 
-          onClick={() => onNavigate(page)}
+          onClick={() => { playSound('click'); onNavigate(page); }}
           className={`${navItemClass} ${isActive ? activeClass : inactiveClass}`}
           aria-label={label}
       >
@@ -39,7 +39,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ currentPage, onNavigate, onOpenCr
         <NavButton page="discover" label="Discover" icon={SearchIcon} />
 
         <button 
-            onClick={onOpenCreateModal}
+            onClick={() => { playSound('click'); onOpenCreateModal(); }}
             className="w-16 h-12 rounded-2xl flex items-center justify-center bg-gradient-to-br from-[var(--accent-color)] to-[var(--secondary-color)] transition-transform hover:scale-105"
             style={{
                 boxShadow: `0 0 20px 0px var(--glow-shadow-color), 0 0 10px 0px var(--glow-shadow-color)`
@@ -50,7 +50,11 @@ const BottomNav: React.FC<BottomNavProps> = ({ currentPage, onNavigate, onOpenCr
         </button>
         
         <div className={`${navItemClass} ${currentPage === 'notifications' ? activeClass : inactiveClass}`}>
-            <button onClick={() => onNavigate('notifications')} className="relative flex flex-col items-center justify-center w-full h-full" aria-label="Notifications">
+            <button 
+              onClick={() => { playSound('click'); onNavigate('notifications'); }} 
+              className="relative flex flex-col items-center justify-center w-full h-full" 
+              aria-label="Notifications"
+            >
                 <BellIcon className="w-8 h-8" filled={currentPage === 'notifications'} />
                 {hasUnreadNotifications && ! (currentPage === 'notifications') && (
                     <span className="absolute top-1 right-[calc(50%-22px)] w-3 h-3 bg-[var(--secondary-color)] rounded-full border-2 border-[var(--frame-bg-color)]" />

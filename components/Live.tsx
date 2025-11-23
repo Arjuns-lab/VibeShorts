@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 
 interface LiveProps {
@@ -11,7 +12,13 @@ const Live: React.FC<LiveProps> = ({ onCancel }) => {
   const [isLive, setIsLive] = useState(false);
 
   const startCamera = async () => {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setError("Camera not supported in this browser.");
+        return;
+    }
+
     try {
+      // 1. Preferred: Video + Audio
       const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       setStream(mediaStream);
       if (videoRef.current) {
@@ -19,8 +26,19 @@ const Live: React.FC<LiveProps> = ({ onCancel }) => {
       }
       setError(null);
     } catch (err) {
-      console.error("Error accessing media devices.", err);
-      setError("Could not access camera/microphone. Please check permissions.");
+      console.warn("Initial camera request failed, trying fallback (video only)...", err);
+      try {
+          // 2. Fallback: Video only
+          const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
+          setStream(mediaStream);
+          if (videoRef.current) {
+            videoRef.current.srcObject = mediaStream;
+          }
+          setError(null);
+      } catch (err2) {
+          console.error("Error accessing media devices.", err2);
+          setError("Could not access camera. Please check permissions.");
+      }
     }
   };
   

@@ -24,6 +24,7 @@ export type Page = 'feed' | 'discover' | 'upload' | 'notifications' | 'profile' 
 interface NavState {
   page: Page;
   viewedUser?: User;
+  viewedPost?: VideoPost;
 }
 
 const PULL_THRESHOLD = 80; // Pixels to pull down to trigger refresh
@@ -73,20 +74,28 @@ const PayoutSetupModal: React.FC<{ currentUser: User; onClose: () => void; onSav
 
 // Suggested Users Component for Empty Following Feed
 const SuggestedUsers: React.FC<{ users: User[], currentUser: User, onToggleFollow: (userId: string) => void }> = ({ users, currentUser, onToggleFollow }) => (
-    <div className="h-full w-full snap-start flex flex-col text-white p-4 pt-20 overflow-y-auto">
-        <h2 className="text-2xl font-black font-display text-center">Suggested For You</h2>
-        <p className="text-center opacity-80 mb-6">Follow some creators to fill your feed!</p>
-        <div className="space-y-4">
+    <div className="h-full w-full snap-start flex flex-col items-center justify-center text-white p-6 pt-20 overflow-y-auto bg-black/20 backdrop-blur-sm">
+        <div className="relative mb-6">
+            <div className="absolute inset-0 bg-gradient-to-tr from-[var(--accent-color)] to-[var(--secondary-color)] rounded-full blur-xl opacity-40 animate-pulse"></div>
+            <img 
+                src="https://media.tenor.com/p0G_mqra_mAAAAAC/anime-phone.gif" 
+                alt="Watching shorts" 
+                className="w-48 h-48 object-cover rounded-2xl shadow-2xl relative z-10 border-2 border-white/20" 
+            />
+        </div>
+        <h2 className="text-2xl font-black font-display text-center mb-2">Start Your Vibe</h2>
+        <p className="text-center opacity-70 mb-8 max-w-xs text-sm">Your following feed is quiet. Discover these trending creators!</p>
+        <div className="w-full space-y-3">
             {users.filter(u => u.id !== currentUser.id).slice(0, 5).map(user => (
-                <div key={user.id} className="bg-white/10 backdrop-blur-md p-3 rounded-2xl flex items-center justify-between">
+                <div key={user.id} className="bg-[var(--frame-bg-color)]/10 backdrop-blur-md p-3 rounded-2xl flex items-center justify-between border border-white/5 hover:bg-[var(--frame-bg-color)]/20 transition-colors">
                     <div className="flex items-center gap-3">
-                        <img src={user.avatarUrl} alt={user.username} className="w-14 h-14 rounded-full"/>
-                        <div>
-                            <p className="font-bold text-lg">@{user.username}</p>
-                            <p className="text-sm opacity-80 truncate w-40">{user.bio}</p>
+                        <img src={user.avatarUrl} alt={user.username} className="w-10 h-10 rounded-full border border-white/10 object-cover"/>
+                        <div className="text-left">
+                            <p className="font-bold text-sm text-white">@{user.username}</p>
+                            <p className="text-[10px] text-white/60 truncate w-32">{user.bio}</p>
                         </div>
                     </div>
-                    <button onClick={() => onToggleFollow(user.id)} className="px-5 py-2 rounded-full font-bold bg-[var(--accent-color)] text-white hover:scale-105 transition-transform">Follow</button>
+                    <button onClick={() => onToggleFollow(user.id)} className="px-4 py-1.5 rounded-full font-bold text-xs bg-white text-black hover:scale-105 transition-transform">Follow</button>
                 </div>
             ))}
         </div>
@@ -201,27 +210,21 @@ const App: React.FC = () => {
     setIsSettingsOpen(false);
   };
 
-  const handlePostVideo = (data: { videoFile: File; caption: string; hashtags: string[]; textOverlays: TextOverlay[]; filterClass: string; startTime: number; endTime: number; videoQuality: 'SD' | 'HD' | '4K'; songTitle?: string }) => {
+  const handlePostVideo = (postData: VideoPost) => {
     if (!currentUser) return;
-    const newVideoUrl = URL.createObjectURL(data.videoFile);
+    
+    // Merge the new post data with the current user info to ensure correctness
     const newPost: VideoPost = {
-      id: `v${Date.now()}`,
+      ...postData,
       user: currentUser,
-      videoUrl: newVideoUrl,
       posterUrl: currentUser.avatarUrl,
-      caption: data.caption,
-      hashtags: data.hashtags,
-      songTitle: data.songTitle || 'Original Sound • ' + currentUser.username,
+      songTitle: postData.songTitle || 'Original Sound • ' + currentUser.username,
       likes: 0,
       comments: 0,
       shares: 0,
       isLiked: false,
-      textOverlays: data.textOverlays,
-      filterClass: data.filterClass,
-      startTime: data.startTime,
-      endTime: data.endTime,
-      quality: data.videoQuality,
     };
+
     setVideoPosts(prevPosts => [newPost, ...prevPosts]);
     resetTo('feed');
   };
@@ -410,12 +413,24 @@ const App: React.FC = () => {
     };
 
     const handleToggleLike = (postId: string) => {
+        // Update videoPosts state
         setVideoPosts(posts => posts.map(p => {
             if (p.id === postId) {
                 return { ...p, isLiked: !p.isLiked, likes: p.isLiked ? p.likes - 1 : p.likes + 1 };
             }
             return p;
         }));
+
+        // Also update viewedPost in navigation history if it matches
+        if (navigationHistory[historyIndex].viewedPost?.id === postId) {
+            const currentPost = navigationHistory[historyIndex].viewedPost;
+            if (currentPost) {
+                const updatedPost = { ...currentPost, isLiked: !currentPost.isLiked, likes: currentPost.isLiked ? currentPost.likes - 1 : currentPost.likes + 1 };
+                const newHistory = [...navigationHistory];
+                newHistory[historyIndex] = { ...newHistory[historyIndex], viewedPost: updatedPost };
+                setNavigationHistory(newHistory);
+            }
+        }
     };
 
     const handleOpenComments = (post: VideoPost) => {
@@ -482,6 +497,10 @@ const App: React.FC = () => {
         }
     };
 
+    const handlePlayDiscoverVideo = (post: VideoPost) => {
+        navigateTo({ page: 'feed', viewedPost: post });
+    };
+
     // Navigation functions
     const navigateTo = (navState: NavState) => {
       const newHistory = navigationHistory.slice(0, historyIndex + 1);
@@ -520,10 +539,26 @@ const App: React.FC = () => {
     // Swipe navigation gesture handlers
     const handleNavTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
       const touch = e.touches[0];
+      const width = e.currentTarget.clientWidth;
+      const isLeftEdge = touch.clientX < SWIPE_EDGE_WIDTH;
+      const isRightEdge = (width - touch.clientX) < SWIPE_EDGE_WIDTH;
+      
       const canGoBack = historyIndex > 0;
       const canGoForward = historyIndex < navigationHistory.length - 1;
       
-      if ((touch.clientX < SWIPE_EDGE_WIDTH && canGoBack) || ((e.currentTarget.clientWidth - touch.clientX) < SWIPE_EDGE_WIDTH && canGoForward)) {
+      let canSwipe = false;
+
+      if (isLeftEdge) {
+          // Swipe Right
+          if (page === 'discover') canSwipe = true;
+          else if (canGoBack) canSwipe = true;
+      } else if (isRightEdge) {
+          // Swipe Left
+          if (page === 'feed') canSwipe = true;
+          else if (canGoForward) canSwipe = true;
+      }
+
+      if (canSwipe) {
         touchState.current = { startX: touch.clientX, startY: touch.clientY, deltaX: 0, canSwipe: true };
       } else {
         touchState.current.canSwipe = false;
@@ -545,8 +580,27 @@ const App: React.FC = () => {
     const handleNavTouchEnd = () => {
       if (!touchState.current.canSwipe) return;
       const { deltaX } = touchState.current;
-      if (deltaX > SWIPE_NAV_THRESHOLD) goBack();
-      else if (deltaX < -SWIPE_NAV_THRESHOLD) goForward();
+      
+      if (deltaX > SWIPE_NAV_THRESHOLD) {
+          // Swipe Right (Back behavior)
+          if (page === 'discover') {
+              // If previous page was feed, go back, otherwise reset to feed
+              if (historyIndex > 0 && navigationHistory[historyIndex - 1].page === 'feed') {
+                  goBack();
+              } else {
+                  resetTo('feed');
+              }
+          } else if (historyIndex > 0) {
+              goBack();
+          }
+      } else if (deltaX < -SWIPE_NAV_THRESHOLD) {
+          // Swipe Left (Forward behavior)
+          if (page === 'feed') {
+              navigateTo({ page: 'discover' });
+          } else if (historyIndex < navigationHistory.length - 1) {
+              goForward();
+          }
+      }
       touchState.current = { startX: 0, startY: 0, deltaX: 0, canSwipe: false };
     };
     
@@ -589,18 +643,41 @@ const App: React.FC = () => {
         return <Welcome onFinished={() => setShowWelcomeScreen(false)} />;
     }
     
-    const feedPosts = getFilteredFeedPosts();
+    const feedPosts = currentNavState.viewedPost 
+        ? [currentNavState.viewedPost] 
+        : getFilteredFeedPosts();
 
     switch (page) {
       case 'feed':
         return (
           <>
-            <header className="absolute top-0 left-0 w-full z-10 p-4 bg-transparent">
-                <div className="flex items-center justify-between space-x-2 text-white bg-black/20 backdrop-blur-sm p-1.5 rounded-full max-w-sm mx-auto" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.3)' }}>
-                    {!dailyProgress.completed ? <DailyChallengeProgress /> : <span className="text-sm font-bold text-yellow-400 pl-2">🎉 Bonus Claimed!</span>}
-                    <div className="flex items-center justify-center space-x-1 flex-grow">
-                        <button onClick={() => setActiveFeed('following')} className={`text-center py-1.5 px-3 rounded-full transition-all ${activeFeed === 'following' ? 'font-black bg-[var(--frame-bg-color)] text-[var(--text-color)] shadow-md interactive-glow-light' : 'font-bold opacity-60'}`}>Following</button>
-                        <button onClick={() => setActiveFeed('foryou')} className={`text-center py-1.5 px-4 rounded-full transition-all ${activeFeed === 'foryou' ? 'font-black bg-[var(--frame-bg-color)] text-[var(--text-color)] shadow-md interactive-glow-light' : 'font-bold opacity-60'}`}>For You</button>
+            <header className="absolute top-0 left-0 w-full z-10 p-4 pointer-events-none">
+                <div className="absolute top-4 left-4 pointer-events-auto">
+                    {!dailyProgress.completed ? (
+                        <div className="bg-black/30 backdrop-blur-md rounded-full pl-3 pr-4 py-1.5 flex items-center gap-2 border border-white/10 text-white shadow-sm">
+                            <DailyChallengeProgress />
+                        </div>
+                    ) : (
+                        <div className="bg-yellow-400 text-black font-bold rounded-full px-3 py-1.5 text-xs shadow-lg animate-pulse">
+                            🎉 Bonus Claimed!
+                        </div>
+                    )}
+                </div>
+                
+                <div className="w-full flex justify-center pointer-events-auto">
+                    <div className="flex items-center bg-black/30 backdrop-blur-md rounded-full p-1 border border-white/10">
+                        <button 
+                            onClick={() => setActiveFeed('following')} 
+                            className={`px-4 py-1.5 rounded-full text-sm transition-all duration-200 ${activeFeed === 'following' ? 'bg-white text-black font-black shadow-md' : 'text-white font-bold opacity-70 hover:opacity-100'}`}
+                        >
+                            Following
+                        </button>
+                        <button 
+                            onClick={() => setActiveFeed('foryou')} 
+                            className={`px-4 py-1.5 rounded-full text-sm transition-all duration-200 ${activeFeed === 'foryou' ? 'bg-white text-black font-black shadow-md' : 'text-white font-bold opacity-70 hover:opacity-100'}`}
+                        >
+                            For You
+                        </button>
                     </div>
                 </div>
             </header>
@@ -640,7 +717,7 @@ const App: React.FC = () => {
           </>
         );
       case 'discover':
-        return <Discover posts={videoPosts} />;
+        return <Discover posts={videoPosts} onPostClick={handlePlayDiscoverVideo} />;
       case 'upload':
         return <Upload onPost={handlePostVideo} onCancel={goBack} />;
       case 'live':

@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import { VideoPost } from '../types';
@@ -6,9 +5,10 @@ import { SearchIcon, HeartIcon, TRENDING_TAGS, MOCK_VIDEO_POSTS } from '../const
 
 interface DiscoverProps {
     posts: VideoPost[];
+    onPostClick: (post: VideoPost) => void;
 }
 
-const Discover: React.FC<DiscoverProps> = ({ posts }) => {
+const Discover: React.FC<DiscoverProps> = ({ posts, onPostClick }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [discoverPosts, setDiscoverPosts] = useState<VideoPost[]>([]);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -64,15 +64,15 @@ const Discover: React.FC<DiscoverProps> = ({ posts }) => {
         return count.toString();
     };
     
-    const handleSearchSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        const trimmedSearch = searchTerm.trim();
+    const performSearch = async (term: string) => {
+        const trimmedSearch = term.trim();
         if (!trimmedSearch) {
             setWebResult(null);
             setSearchError(null);
             return;
         }
 
+        setSearchTerm(trimmedSearch);
         setIsSearching(true);
         setSearchError(null);
         setWebResult(null);
@@ -98,6 +98,11 @@ const Discover: React.FC<DiscoverProps> = ({ posts }) => {
         } finally {
             setIsSearching(false);
         }
+    };
+    
+    const handleSearchSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        performSearch(searchTerm);
     };
     
     const filteredPosts = useMemo(() => {
@@ -180,7 +185,7 @@ const Discover: React.FC<DiscoverProps> = ({ posts }) => {
                             {TRENDING_TAGS.map(tag => (
                                 <button 
                                     key={tag} 
-                                    onClick={() => setSearchTerm(tag.replace('#', ''))}
+                                    onClick={() => performSearch(tag.replace('#', ''))}
                                     className="px-3 py-1 bg-[var(--bg-color)] rounded-full font-semibold text-sm hover:bg-[var(--text-color)]/10 transition-colors"
                                 >
                                     {tag}
@@ -195,7 +200,11 @@ const Discover: React.FC<DiscoverProps> = ({ posts }) => {
                      <h2 className="text-lg font-bold font-display px-1">{isSearchActive ? 'Matching Videos' : 'Popular'}</h2>
                      <div className="grid grid-cols-3 gap-1 mt-2">
                         {filteredPosts.map(post => (
-                            <div key={post.id} className="aspect-[9/16] relative bg-[var(--bg-color)] rounded-md overflow-hidden group profile-video-thumb">
+                            <div 
+                                key={post.id} 
+                                className="aspect-[9/16] relative bg-[var(--bg-color)] rounded-md overflow-hidden group profile-video-thumb cursor-pointer"
+                                onClick={() => onPostClick(post)}
+                            >
                                 <img src={post.posterUrl} alt={post.caption} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
                                 <div className="absolute bottom-1 left-2 text-white flex items-center gap-1 font-bold text-sm">
